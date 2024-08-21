@@ -3,17 +3,15 @@ package perso.caupanharm.backend
 import mu.KotlinLogging
 import org.springframework.web.bind.annotation.*
 import perso.caupanharm.backend.models.*
-import perso.caupanharm.backend.models.henrik3.Henrik3Errors
-import perso.caupanharm.backend.models.henrik3.Henrik3LifetimeMatches
-import perso.caupanharm.backend.models.henrik3.Henrik3MatchesV3
-import perso.caupanharm.backend.models.henrik3.Henrik3Player
+import perso.caupanharm.backend.models.henrik.HenrikErrors
+import perso.caupanharm.backend.models.henrik.V1LifetimeMatches
+import perso.caupanharm.backend.models.henrik.v3.Henrik3Player
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-@CrossOrigin(origins = ["*"], maxAge = 3600)
 @RestController
 @RequestMapping("/api")
 class DataController(private val localDataService: LocalDataService, private val henrikService: HenrikService) {
@@ -57,28 +55,15 @@ class DataController(private val localDataService: LocalDataService, private val
         return uuidQuery.flatMap { result ->
             when (result) {
                 is Henrik3Player -> Mono.just(henrikService.getMatchesLightFromUUID(result.data.puuid))
-                is Henrik3Errors -> Mono.just(result)
+                is HenrikErrors -> Mono.just(result)
                 else -> Mono.error(IllegalArgumentException("Unexpected type"))
             }
         }
     }
 
-    @GetMapping("/matches/full/{name}/{tag}")
-    fun getPlayerMatchesFull(@PathVariable name: String, @PathVariable tag: String): Mono<MutableList<Any>> {
-        logger.info("Endpoint fetched: matches full")
-        return henrikService.getMatchesLightFromName(name, tag)
-            .flatMapMany { matches ->
-                if (matches is Henrik3LifetimeMatches) {
-                    var index = 0
-                    Flux.fromIterable(matches.data)
-                        .flatMap { match ->
-                            index++
-                            henrikService.getMatchFromId(match.meta.id, matches.results.returned, index) }
-                } else {
-                    Flux.error(IllegalStateException("Unexpected result type"))
-                }
-            }
-            .collectList()
+    @GetMapping("/matches/{name}/{tag}")
+    fun getPlayerMatches(@PathVariable name: String, @PathVariable tag: String): Mono<Any> {
+        logger.info("Endpoint fetched: matches")
+        return henrikService.getStoredMatches(name, tag)
     }
-
 }
