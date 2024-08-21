@@ -1,4 +1,6 @@
-package perso.caupanharm.backend.models.henrik3
+package perso.caupanharm.backend.models.henrik.v3
+
+import perso.caupanharm.backend.models.henrik.PlayerCard
 
 data class Henrik3Player(
     val status: Int,

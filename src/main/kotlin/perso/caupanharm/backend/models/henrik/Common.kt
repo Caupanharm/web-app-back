@@ -1,4 +1,6 @@
-package perso.caupanharm.backend.models.henrik3
+package perso.caupanharm.backend.models.henrik
+
+import perso.caupanharm.backend.models.henrik.v3.*
 
 
 data class PlayerCard(
@@ -8,11 +10,16 @@ data class PlayerCard(
     val id: String?
 )
 
-data class Agent(
+data class AgentAssets(
     val small: String,
     val full : String,
     val bust: String,
     val killfeed: String
+)
+
+data class Damage(
+    val made: Int,
+    val received: Int
 )
 
 data class Platform(
@@ -36,13 +43,13 @@ data class Location(
     val y: Int
 )
 
-data class PlayerShort(
+data class PlayerShortV3(
     val puuid: String,
     val display_name: String,
     val team: String
 )
 
-data class PlayerLocation(
+data class PlayerLocationV3(
     val player_puuid: String,
     val player_display_name: String,
     val player_team: String,
@@ -50,7 +57,7 @@ data class PlayerLocation(
     val view_radians: Double
 )
 
-data class Abilities(
+data class AbilitiesV3(
     val c_cast: Int?,
     val q_cast: Int?,
     val e_cast: Int?,
@@ -75,7 +82,7 @@ data class Results(
     val after: Int
 )
 
-data class MatchV1(
+data class V1LifetimeMatchesItem(
     val meta: MetaV1,
     val stats: StatsV1,
     val teams: TeamsV1

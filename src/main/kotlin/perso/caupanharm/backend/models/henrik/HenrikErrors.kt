@@ -1,6 +1,6 @@
-package perso.caupanharm.backend.models.henrik3
+package perso.caupanharm.backend.models.henrik
 
-data class Henrik3Errors(
+data class HenrikErrors(
     val errors: List<Error>
 )
 

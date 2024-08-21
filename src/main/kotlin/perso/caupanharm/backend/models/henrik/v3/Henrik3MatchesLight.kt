@@ -1,9 +1,12 @@
-package perso.caupanharm.backend.models.henrik3
+package perso.caupanharm.backend.models.henrik.v3
+
+import perso.caupanharm.backend.models.henrik.V1LifetimeMatchesItem
+import perso.caupanharm.backend.models.henrik.Results
 
 data class Henrik3MatchesV1(
     val status: Int,
     val results: Results,
-    val data: List<MatchV1>
+    val data: List<V1LifetimeMatchesItem>
 )
 
 
@@ -31,9 +34,5 @@ data class Shots(
     val leg: Int
 )
 
-data class Damage(
-    val made: Int,
-    val received: Int
-)
 
 

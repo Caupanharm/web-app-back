@@ -1,4 +1,6 @@
-package perso.caupanharm.backend.models.henrik3
+package perso.caupanharm.backend.models.henrik.v3
+
+import perso.caupanharm.backend.models.henrik.*
 
 data class Henrik3MatchesV3(
     val status: Int,
@@ -11,7 +13,7 @@ data class Henrik3MatchV3(
 )
 
 data class MatchV3(
-    val metadata: Metadata,
+    val metadata: MetadataV3,
     val players: Players,
     val observers: List<Observer>,
     val coaches: List<Coach>,
@@ -21,7 +23,7 @@ data class MatchV3(
 )
 
 // Use of underscores defined by the Henrik API, not me
-data class Metadata(
+data class MetadataV3(
     val map: String,
     val game_version: String,
     val game_length: Int,
@@ -67,7 +69,7 @@ data class Player(
     val assets: Assets,
     val behavior: Behavior,
     val platform: Platform,
-    val ability_casts: Abilities,
+    val ability_casts: AbilitiesV3,
     val stats: StatsV3,
     val economy: EconomyShort,
     val damage_made: Int,
@@ -77,7 +79,7 @@ data class Player(
 
 data class Assets(
     val card: PlayerCard,
-    val agent: Agent
+    val agent: AgentAssets
 )
 
 data class Behavior(
@@ -168,21 +170,21 @@ data class Round(
 
 data class PlantEvents(
     val plant_location: Location?,
-    val planted_by: PlayerShort?,
+    val planted_by: PlayerShortV3?,
     val plant_site: String?,
     val plant_time_in_round: Int?,
-    val players_locations_on_plant: List<PlayerLocation>?,
+    val players_locations_on_plant: List<PlayerLocationV3>?,
 )
 
 data class DefuseEvents(
     val defuse_location: Location?,
-    val defused_by: PlayerShort?,
+    val defused_by: PlayerShortV3?,
     val defuse_time_in_round: Int?,
-    val players_locations_on_defuse: List<PlayerLocation>?
+    val players_locations_on_defuse: List<PlayerLocationV3>?
 )
 
 data class PlayerStats(
-    val ability_casts: Abilities,
+    val ability_casts: AbilitiesV3,
     val player_puuid: String,
     val player_display_name: String,
     val player_team: String,
@@ -232,7 +234,7 @@ data class KillEvents(
     val damage_weapon_name: String?,
     val damage_weapon_assets: EquipmentAssets,
     val secondary_fire_mode: Boolean,
-    val player_locations_on_kill: List<PlayerLocation>,
+    val player_locations_on_kill: List<PlayerLocationV3>,
     val assistants: List<Assistant>
 )
 
