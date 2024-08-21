@@ -111,7 +111,7 @@ class HenrikService(private val henrik3Client: WebClient) {
                             }
     }
 
-    fun getMatchFromIdV4(matchId: String, total: Int?, current: Int?): Mono<Any> {
+    fun getMatchFromIdV4(matchId: String, total: Int? = null, current: Int? = null): Mono<Any> {
         if((current == null) || (total == null)){
             logger.info("GET  https://api.henrikdev.xyz/valorant/v4/match/eu/$matchId")
         }else{

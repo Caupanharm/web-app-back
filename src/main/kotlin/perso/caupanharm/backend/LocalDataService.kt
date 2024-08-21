@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
-import perso.caupanharm.backend.models.TestData
 import java.io.File
 
 @Repository
@@ -27,16 +26,11 @@ class LocalDataService {
     }
 
     // Création d'un TypeReference par type d'objet à déserialiser
-    val testDataTypeReference = object : TypeReference<List<TestData>>() {}
     val bracketMatchDataTypeReference = object : TypeReference<List<BracketMatchData>>() {}
     val playersMatchesDataTypeReference = object : TypeReference<List<PlayersMatchData>>() {}
     val additionalCustomPlayerDataTypeReference = object : TypeReference<List<AdditionalCustomPlayerData>>() {}
 
     // Récupération des données désérialisées
-    fun getTestData(): List<TestData> {
-        return getLocalJsonData("testData", testDataTypeReference)
-    }
-
     fun getBracketData(): List<BracketMatchData> {
         return getLocalJsonData("bracket", bracketMatchDataTypeReference)
     }

@@ -17,13 +17,6 @@ import reactor.core.publisher.Mono
 class DataController(private val localDataService: LocalDataService, private val henrikService: HenrikService) {
     private val logger = KotlinLogging.logger {}
 
-
-    @GetMapping("/test")
-    fun getData(): List<TestData> {
-        logger.info("Endpoint fetched: test")
-        return localDataService.getTestData()
-    }
-
     @GetMapping("/bracket")
     fun getBracket(): List<BracketMatchData> {
         logger.info("Endpoint fetched: bracket")
@@ -66,4 +59,16 @@ class DataController(private val localDataService: LocalDataService, private val
         logger.info("Endpoint fetched: matches")
         return henrikService.getStoredMatches(name, tag)
     }
+
+    @GetMapping("/match")
+    fun getMatch(@RequestParam("id") matchId: String): Mono<Any> {
+        logger.info("Endpoint fetched: match")
+
+        /*
+        Regarder si le match est déjà dans la db, l'y ajouter le cas échéant, retourner l'objet modifié plutôt que celui d'Henrik
+         */
+
+        return henrikService.getMatchFromIdV4(matchId)
+    }
+
 }
