@@ -1,0 +1,270 @@
+{
+  "status": 200,
+  "data": {
+    "metadata": {
+      "match_id": "b65f2ae7-578e-48f3-bd52-47235c6bc4b6",
+      "map": {
+        "id": "2c9d57ec-4431-9c5e-2939-8f9ef6dd5cba",
+        "name": "Bind"
+      },
+      "game_version": "release-09.02-shipping-20-2703179",
+      "game_length_in_ms": 1819068,
+      "started_at": "2024-08-13T11:47:44.336Z",
+      "is_completed": true,
+      "queue": {
+        "id": "competitive",
+        "name": "Competitive",
+        "mode_type": "Standard"
+      },
+      "season": {
+        "id": "52ca6698-41c1-e7de-4008-8994d2221209",
+        "short": "e9a1"
+      },
+      "platform": "pc",
+      "premier": null,
+      "party_rr_penaltys": [
+        {
+          "party_id": "3b99b8b3-6103-4526-abb2-9c21f3ca5413",
+          "penalty": 0
+        }
+      ],
+      "region": "eu",
+      "cluster": "London"
+    },
+    "players": [
+      {
+        "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+        "name": "Player 1",
+        "tag": "P1",
+        "team_id": "Red",
+        "platform": "pc",
+        "party_id": "3b99b8b3-6103-4526-abb2-9c21f3ca5413",
+        "agent": {
+          "id": "e370fa57-4757-3604-3648-499e1f642d3f",
+          "name": "Gekko"
+        },
+        "stats": {
+          "score": 4313,
+          "kills": 15,
+          "deaths": 14,
+          "assists": 4,
+          "headshots": 14,
+          "bodyshots": 27,
+          "legshots": 3,
+          "damage": {
+            "dealt": 2977,
+            "received": 2596
+          }
+        },
+        "ability_casts": {
+          "grenade": 6,
+          "ability1": 10,
+          "ability2": 16,
+          "ultimate": 4
+        },
+        "tier": {
+          "id": 18,
+          "name": "Diamond 1"
+        },
+        "customization": {
+          "card": "9ef2f845-4ab5-2350-ea38-0795bb21ed05",
+          "title": "bc6a30d8-4d83-82aa-dfe9-7389c776f312",
+          "preferred_level_border": "cbd1914e-43f8-7ae5-38c4-228bcbe58756"
+        },
+        "account_level": 452,
+        "session_playtime_in_ms": 8100000,
+        "behavior": {
+          "afk_rounds": 0,
+          "friendly_fire": {
+            "incoming": 0,
+            "outgoing": 0
+          },
+          "rounds_in_spawn": 0
+        },
+        "economy": {
+          "spent": {
+            "overall": 44600,
+            "average": 2477.7778
+          },
+          "loadout_value": {
+            "overall": 57850,
+            "average": 3213.889
+          }
+        }
+      }
+    ],
+    "observers": [],
+    "coaches": [],
+    "teams": [
+      {
+        "team_id": "Red",
+        "rounds": {
+          "won": 5,
+          "lost": 13
+        },
+        "won": false,
+        "premier_roster": null
+      }
+    ],
+    "rounds": [
+      {
+        "id": 0,
+        "result": "Defuse",
+        "ceremony": "CeremonyDefault",
+        "winning_team": "Blue",
+        "plant": {
+          "round_time_in_ms": 19416,
+          "site": "A",
+          "location": {
+            "x": 10446,
+            "y": 1732
+          },
+          "player": {
+            "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+            "name": "Player 1",
+            "tag": "P1",
+            "team": "Red"
+          },
+          "player_locations": [
+            {
+              "player": {
+                "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+                "name": "Player 1",
+                "tag": "P1",
+                "team": "Red"
+              },
+              "view_radians": 5.1327944,
+              "location": {
+                "x": 9410,
+                "y": 2262
+              }
+            }
+          ]
+        },
+        "defuse": {
+          "round_time_in_ms": 39287,
+          "location": {
+            "x": 10498,
+            "y": 1756
+          },
+          "player": {
+            "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+            "name": "Player 1",
+            "tag": "P1",
+            "team": "Red"
+          },
+          "player_locations": [
+            {
+              "player": {
+                "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+                "name": "Player 1",
+                "tag": "P1",
+                "team": "Red"
+              },
+              "view_radians": 3.6148252,
+              "location": {
+                "x": 10498,
+                "y": 1756
+              }
+            }
+          ]
+        },
+        "stats": [
+          {
+            "player": {
+              "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+              "name": "Player 1",
+              "tag": "P1",
+              "team": "Red"
+            },
+            "ability_casts": {
+              "grenade": null,
+              "ability_1": null,
+              "ability_2": null,
+              "ultimate": null
+            },
+            "damage_events": [
+              {
+                "player": {
+                  "puuid": "1c962e38-4bdf-5d2f-8f91-fd8d7f2116af",
+                  "name": "Player 2",
+                  "tag": "P2",
+                  "team": "Blue"
+                },
+                "bodyshots": 0,
+                "headshots": 1,
+                "legshots": 0,
+                "damage": 105
+              }
+            ],
+            "stats": {
+              "score": 193,
+              "kills": 1,
+              "headshots": 1,
+              "bodyshots": 0,
+              "legshots": 0
+            },
+            "economy": {
+              "loadout_value": 800,
+              "remaining": 0,
+              "weapon": {
+                "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+                "name": "Ghost",
+                "type": "Weapon"
+              },
+              "armor": null
+            },
+            "was_afk": false,
+            "received_penalty": false,
+            "stayed_in_spawn": false
+          }
+        ]
+      }
+    ],
+    "kills": [
+      {
+        "time_in_round_in_ms": 11482,
+        "time_in_match_in_ms": 66501,
+        "round": 0,
+        "killer": {
+          "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+          "name": "Player 1",
+          "tag": "P1",
+          "team": "Red"
+        },
+        "victim": {
+          "puuid": "60c156ab-c597-5596-893c-acf0227a2682",
+          "name": "Player 2",
+          "tag": "P2",
+          "team": "Blue"
+        },
+        "assistants": [],
+        "location": {
+          "x": 10702,
+          "y": -48
+        },
+        "weapon": {
+          "id": "29a0cfab-485b-f5d5-779a-b59f85e204a8",
+          "name": "Classic",
+          "type": "Weapon"
+        },
+        "secondary_fire_mode": true,
+        "player_locations": [
+          {
+            "player": {
+              "puuid": "b441ec66-669d-550d-bd34-24a678c5eb6f",
+              "name": "Player 1",
+              "tag": "P1",
+              "team": "Red"
+            },
+            "view_radians": 0.9495989,
+            "location": {
+              "x": 9426,
+              "y": 592
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
