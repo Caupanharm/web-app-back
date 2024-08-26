@@ -1,11 +1,11 @@
-package perso.caupanharm.backend
+package perso.caupanharm.backend.services
 
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import perso.caupanharm.backend.models.henrik.HenrikErrors
-import perso.caupanharm.backend.models.henrik.HenrikMatchV4
+import perso.caupanharm.backend.models.henrik.HenrikMatchResponseV4
 import perso.caupanharm.backend.models.henrik.V1LifetimeMatches
 import perso.caupanharm.backend.models.henrik.v3.*
 import reactor.core.publisher.Mono
@@ -121,7 +121,7 @@ class HenrikService(private val henrik3Client: WebClient) {
             .uri("https://api.henrikdev.xyz/valorant/v4/match/eu/$matchId")
             .exchangeToMono { response ->
                 when (response.statusCode().value()) {
-                    in 200..299 -> response.bodyToMono(HenrikMatchV4::class.java)
+                    in 200..299 -> response.bodyToMono(HenrikMatchResponseV4::class.java)
                     else -> response.bodyToMono(HenrikErrors::class.java)
                 }
             }

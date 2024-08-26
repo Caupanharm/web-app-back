@@ -1,21 +1,28 @@
-package perso.caupanharm.backend
+package perso.caupanharm.backend.controllers
 
 import mu.KotlinLogging
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
-import perso.caupanharm.backend.models.*
+import perso.caupanharm.backend.repositories.MatchRepository
+import perso.caupanharm.backend.Utils
+import perso.caupanharm.backend.services.HenrikService
+import perso.caupanharm.backend.services.LocalDataService
+import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.henrik.HenrikErrors
-import perso.caupanharm.backend.models.henrik.V1LifetimeMatches
+import perso.caupanharm.backend.models.henrik.HenrikMatchResponseV4
 import perso.caupanharm.backend.models.henrik.v3.Henrik3Player
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
 @RequestMapping("/api")
 class DataController(private val localDataService: LocalDataService, private val henrikService: HenrikService) {
     private val logger = KotlinLogging.logger {}
+
+    @Autowired
+    lateinit var repository: MatchRepository
 
     @GetMapping("/bracket")
     fun getBracket(): List<BracketMatchData> {
@@ -61,14 +68,28 @@ class DataController(private val localDataService: LocalDataService, private val
     }
 
     @GetMapping("/match")
-    fun getMatch(@RequestParam("id") matchId: String): Mono<Any> {
+    fun getMatch(@RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match")
 
-        /*
-        Regarder si le match est déjà dans la db, l'y ajouter le cas échéant, retourner l'objet modifié plutôt que celui d'Henrik
-         */
 
-        return henrikService.getMatchFromIdV4(matchId)
+        val isInDb = false
+        /*
+        Regarder si le match est déjà dans la db, l'y ajouter le cas échéant
+         */
+        if(isInDb){
+            val dbData = null
+            return Mono.just(CaupanharmResponse(false, null, dbData)) // TODO récupérer données db
+        }else{
+            return henrikService.getMatchFromIdV4(matchId).map { response ->
+                if (response is HenrikMatchResponseV4) {
+                    repository.save(Utils.caupanharmToPostgresMatch(Utils.henrikToCaupanharmMatch(response)))
+                    CaupanharmResponse(resolved = true, errorCode = null, body = Utils.henrikToCaupanharmMatch(response))
+                } else {
+                    CaupanharmResponse(resolved = false, errorCode = null, body = response) // TODO adapter codes et réponse
+                }
+            }
+        }
+
     }
 
 }

@@ -1,4 +1,4 @@
-package perso.caupanharm.backend
+package perso.caupanharm.backend.services
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper

@@ -1,4 +1,4 @@
-package perso.caupanharm.backend
+package perso.caupanharm.backend.config
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
