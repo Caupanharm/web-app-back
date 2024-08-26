@@ -3,102 +3,102 @@ package perso.caupanharm.backend.models.henrik
 import perso.caupanharm.backend.models.henrik.v3.*
 
 
-data class PlayerCard(
+data class HenrikPlayerCard(
     val small: String,
     val large: String,
     val wide: String,
     val id: String?
 )
 
-data class AgentAssets(
+data class HenrikAgentAssets(
     val small: String,
     val full : String,
     val bust: String,
     val killfeed: String
 )
 
-data class Damage(
-    val made: Int,
+data class HenrikDamage(
+    val dealt: Int,
     val received: Int
 )
 
-data class Platform(
+data class HenrikPlatform(
     val type: String,
-    val os: OS
+    val os: HenrikOS
 )
 
-data class OS(
+data class HenrikOS(
     val name: String,
     val version: String
 )
 
-data class Session(
+data class HenrikSession(
     val minutes: Int,
     val seconds: Int,
     val milliseconds: Int
 )
 
-data class Location(
+data class HenrikLocation(
     val x: Int,
     val y: Int
 )
 
-data class PlayerShortV3(
+data class HenrikPlayerShortV3(
     val puuid: String,
     val display_name: String,
     val team: String
 )
 
-data class PlayerLocationV3(
+data class HenrikPlayerLocationV3(
     val player_puuid: String,
     val player_display_name: String,
     val player_team: String,
-    val location: Location,
+    val location: HenrikLocation,
     val view_radians: Double
 )
 
-data class AbilitiesV3(
+data class HenrikAbilitiesV3(
     val c_cast: Int?,
     val q_cast: Int?,
     val e_cast: Int?,
     val x_cast: Int?
 )
 
-data class Equipment(
+data class HenrikEquipment(
     val id: String?,
     val name: String?,
-    val assets: EquipmentAssets
+    val assets: HenrikEquipmentAssets
 )
 
-data class EquipmentAssets(
+data class HenrikEquipmentAssets(
     val display_icon: String?,
     val killfeed_icon: String?
 )
 
-data class Results(
+data class HenrikResults(
     val total: Int,
     val returned: Int,
     val before: Int,
     val after: Int
 )
 
-data class V1LifetimeMatchesItem(
-    val meta: MetaV1,
-    val stats: StatsV1,
-    val teams: TeamsV1
+data class HenrikV1LifetimeMatchesItem(
+    val meta: HenrikMetaV1,
+    val stats: HenrikStatsV1,
+    val teams: HenrikTeamsV1
 )
 
-data class MetaV1(
+data class HenrikMetaV1(
     val id: String,
     val map: MapInfo,
     val version: String,
     val mode: String,
     val started_at: String,
-    val season: Season,
+    val season: HenrikSeason,
     val region: String,
     val cluster: String
 )
-data class StatsV1(
+data class HenrikStatsV1(
     val puuid: String,
     val team: String,
     val level: Int,
@@ -109,9 +109,9 @@ data class StatsV1(
     val deaths: Int,
     val assists: Int,
     val shots: Shots,
-    val damage: Damage
+    val damage: HenrikDamage
 )
-data class TeamsV1(
+data class HenrikTeamsV1(
     val red: Int,
     val blue: Int
 )

@@ -1,6 +1,6 @@
 package perso.caupanharm.backend.models.henrik.v3
 
-import perso.caupanharm.backend.models.henrik.PlayerCard
+import perso.caupanharm.backend.models.henrik.HenrikPlayerCard
 
 data class Henrik3Player(
     val status: Int,
@@ -13,7 +13,7 @@ data class PlayerData(
     val account_level: Int,
     val name: String,
     val tag: String,
-    val card: PlayerCard,
+    val card: HenrikPlayerCard,
     val last_update: String,
     val last_update_raw: Long
 )

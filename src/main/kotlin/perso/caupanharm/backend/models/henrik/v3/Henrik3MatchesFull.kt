@@ -65,11 +65,11 @@ data class Player(
     val player_card: String,
     val player_title: String,
     val party_id: String,
-    val session_playtime: Session,
+    val session_playtime: HenrikSession,
     val assets: Assets,
     val behavior: Behavior,
-    val platform: Platform,
-    val ability_casts: AbilitiesV3,
+    val platform: HenrikPlatform,
+    val ability_casts: HenrikAbilitiesV3,
     val stats: StatsV3,
     val economy: EconomyShort,
     val damage_made: Int,
@@ -78,8 +78,8 @@ data class Player(
 
 
 data class Assets(
-    val card: PlayerCard,
-    val agent: AgentAssets
+    val card: HenrikPlayerCard,
+    val agent: HenrikAgentAssets
 )
 
 data class Behavior(
@@ -117,8 +117,8 @@ data class Observer(
     val puuid: String,
     val name: String,
     val tag: String,
-    val platform: Platform,
-    val session_playtime: Session,
+    val platform: HenrikPlatform,
+    val session_playtime: HenrikSession,
     val team: String,
     val level: Int,
     val player_card: String,
@@ -169,22 +169,22 @@ data class Round(
 )
 
 data class PlantEvents(
-    val plant_location: Location?,
-    val planted_by: PlayerShortV3?,
+    val plant_location: HenrikLocation?,
+    val planted_by: HenrikPlayerShortV3?,
     val plant_site: String?,
     val plant_time_in_round: Int?,
-    val players_locations_on_plant: List<PlayerLocationV3>?,
+    val players_locations_on_plant: List<HenrikPlayerLocationV3>?,
 )
 
 data class DefuseEvents(
-    val defuse_location: Location?,
-    val defused_by: PlayerShortV3?,
+    val defuse_location: HenrikLocation?,
+    val defused_by: HenrikPlayerShortV3?,
     val defuse_time_in_round: Int?,
-    val players_locations_on_defuse: List<PlayerLocationV3>?
+    val players_locations_on_defuse: List<HenrikPlayerLocationV3>?
 )
 
 data class PlayerStats(
-    val ability_casts: AbilitiesV3,
+    val ability_casts: HenrikAbilitiesV3,
     val player_puuid: String,
     val player_display_name: String,
     val player_team: String,
@@ -214,8 +214,8 @@ data class DamageEvents(
 
 data class Economy(
     val loadout_value: Int,
-    val weapon: Equipment,
-    val armor: Equipment,
+    val weapon: HenrikEquipment,
+    val armor: HenrikEquipment,
     val remaining: Int,
     val spent: Int
 )
@@ -229,12 +229,12 @@ data class KillEvents(
     val victim_puuid: String,
     val victim_display_name: String,
     val victim_team: String,
-    val victim_death_location: Location,
+    val victim_death_location: HenrikLocation,
     val damage_weapon_id: String,
     val damage_weapon_name: String?,
-    val damage_weapon_assets: EquipmentAssets,
+    val damage_weapon_assets: HenrikEquipmentAssets,
     val secondary_fire_mode: Boolean,
-    val player_locations_on_kill: List<PlayerLocationV3>,
+    val player_locations_on_kill: List<HenrikPlayerLocationV3>,
     val assistants: List<Assistant>
 )
 

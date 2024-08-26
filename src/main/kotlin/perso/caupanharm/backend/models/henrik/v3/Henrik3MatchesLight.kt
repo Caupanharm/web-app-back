@@ -1,12 +1,12 @@
 package perso.caupanharm.backend.models.henrik.v3
 
-import perso.caupanharm.backend.models.henrik.V1LifetimeMatchesItem
-import perso.caupanharm.backend.models.henrik.Results
+import perso.caupanharm.backend.models.henrik.HenrikV1LifetimeMatchesItem
+import perso.caupanharm.backend.models.henrik.HenrikResults
 
 data class Henrik3MatchesV1(
     val status: Int,
-    val results: Results,
-    val data: List<V1LifetimeMatchesItem>
+    val results: HenrikResults,
+    val data: List<HenrikV1LifetimeMatchesItem>
 )
 
 
