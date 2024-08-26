@@ -4,6 +4,6 @@ data class V1LifetimeMatches (
     val status: String,
     val name: String?,
     val tag: String?,
-    val results: Results,
-    val data: List<V1LifetimeMatchesItem>
+    val results: HenrikResults,
+    val data: List<HenrikV1LifetimeMatchesItem>
 )

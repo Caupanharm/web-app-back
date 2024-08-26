@@ -2,142 +2,163 @@ package perso.caupanharm.backend.models.henrik
 
 data class HenrikMatchesFullV4(
     val status: Int,
-    val data: List<MatchV4>
+    val data: List<HenrikMatchV4>
+)
+
+data class HenrikMatchResponseV4(
+    val status: Int,
+    val data: HenrikMatchV4
 )
 
 data class HenrikMatchV4(
-    val status: Int,
-    val data: MatchV4
-)
-
-data class MatchV4(
-    val metadata: Metadata,
-    val players: List<Player>,
-    val observers: List<Observer>,
-    val coaches: List<Coach>,
-    val teams: List<Team>,
-    val rounds: List<Round>,
-    val kills: List<KillEvents>
+    val metadata: HenrikMetadata,
+    val players: List<HenrikPlayer>,
+    val observers: List<HenrikObserver>,
+    val coaches: List<HenrikCoach>,
+    val teams: List<HenrikTeam>,
+    val rounds: List<HenrikRound>,
+    val kills: List<HenrikKillEvents>
 )
 
 // Use of underscores defined by the Henrik API, not me
-data class Metadata(
+data class HenrikMetadata(
     val match_id: String,
-    val map: Map,
+    val map: HenrikMap,
     val game_version: String,
     val game_length_in_ms: Int,
     val started_at: String,
     val is_completed: Boolean,
-    val queue: Queue,
-    val season: Season,
+    val queue: HenrikQueue,
+    val season: HenrikSeason,
     val platform: String,
-    val premier_info: PremierInfo?,
-    val party_rr_penaltys: List<Penalty>?,
+    val premier: HenrikPremierInfo?,
+    val party_rr_penaltys: List<HenrikPenalty>?,
     val region: String,
     val cluster: String?
 )
 
-data class Map(
+data class HenrikMap(
     val id: String,
     val name: String
 )
 
-data class Queue(
+data class HenrikQueue(
     val id: String,
     val name: String?,
     val mode_type: String?
 )
 
-data class Season(
+data class HenrikSeason(
     val id: String,
     val short: String
 )
 
-data class Penalty(
+data class HenrikPenalty(
     val party_id: String,
     val penalty: Int
 )
 
-data class PremierInfo(
+data class HenrikPremierInfo(
     val tournament_id: String?,
     val matchup_id: String?
 )
 
-data class Player(
+data class HenrikPlayer(
     val puuid: String,
     val name: String,
     val tag: String,
     val team_id: String,
     val platform: String,
     val party_id: String,
-    val agent: Agent,
-    val stats: Stats,
-    val ability_casts: Abilities,
-    val tier: Tier,
-    val card_id: String?,
-    val title_id: String?,
-    val prefered_level_border: String?,
+    val agent: HenrikAgent,
+    val stats: HenrikStats,
+    val ability_casts: HenrikAbilitiesPlayer,
+    val tier: HenrikTier,
+    val customization: HenrikCustomization,
     val account_level: Int,
     val session_playtime_in_ms: Int,
-    val behavior: Behavior,
-    val economy: EconomyShort
+    val behavior: HenrikBehavior,
+    val economy: HenrikEconomyShort
 )
 
-data class Tier(
-    val id: String,
+data class HenrikCustomization(
+    val card: String?,
+    val title: String?,
+    val preferred_level_border: String?,
+)
+
+data class HenrikTier(
+    val id: Int,
     val name: String?
 )
 
-data class Agent(
+data class HenrikAgent(
     val id: String,
     val name: String
 )
 
-data class Assets(
-    val card: PlayerCard,
-    val agent: AgentAssets
+data class HenrikAssets(
+    val card: HenrikPlayerCard,
+    val agent: HenrikAgentAssets
 )
 
-data class Behavior(
+data class HenrikBehavior(
     val afk_rounds: Int,
-    val friendly_fire: FriendlyFire,
+    val friendly_fire: HenrikFriendlyFire,
     val rounds_in_spawn: Int
 )
 
-data class FriendlyFire(
+data class HenrikFriendlyFire(
     val incoming: Int,
     val outgoing: Int
 )
 
-data class Stats(
+data class HenrikStats(
     val score: Int,
     val kills: Int,
     val deaths: Int?,
-    val assists: Int,
-    val bodyshots: Int,
+    val assists: Int?,
+    val headshots: Int?,
+    val bodyshots: Int?,
+    val legshots: Int?,
+    val damage: HenrikDamage?
+)
+
+data class HenrikRoundPlayerStats(
+    val score: Int,
+    val kills: Int,
     val headshots: Int,
-    val legshots: Int,
-    val damage: Damage?
+    val bodyshots: Int,
+    val legshots: Int
 )
 
-data class EconomyShort(
-    val spent: EconomyDetails,
-    val loadout_value: EconomyDetails
+data class HenrikEconomyShort(
+    val spent: HenrikEconomyDetails,
+    val loadout_value: HenrikEconomyDetails
 )
 
-data class Abilities(
+data class HenrikAbilitiesPlayer(
     val grenade: Int,
-    val ability_1: Int,
-    val ability_2: Int,
+    val ability1: Int,
+    val ability2: Int,
     val ultimate: Int
 )
 
-data class EconomyDetails(
-    val overall: Int,
-    val average: Int
+
+// this api is messed up
+data class HenrikAbilitiesRound(
+    val grenade: Int?,
+    val ability_1: Int?,
+    val ability_2: Int?,
+    val ultimate: Int?
 )
 
-data class Observer(
+data class HenrikEconomyDetails(
+    val overall: Int,
+    val average: Double
+)
+
+data class HenrikObserver(
     val puuid: String,
     val name: String,
     val tag: String,
@@ -148,33 +169,33 @@ data class Observer(
     val party_id: String,
 )
 
-data class Coach(
+data class HenrikCoach(
     val puuid: String,
     val team: String
 )
 
-data class Team(
+data class HenrikTeam(
     val team_id: String,
-    val rounds: RoundsShort,
+    val rounds: HenrikRoundsShort,
     val won: Boolean,
-    val premier_roster: Roster?
+    val premier_roster: HenrikRoster?
 )
 
-data class RoundsShort(
+data class HenrikRoundsShort(
     val won: Int,
     val lost: Int
 )
 
 
-data class Roster(
+data class HenrikRoster(
     val id: String,
     val members: List<String>,
     val name: String,
-    val customization: Customization,
+    val customization: HenrikIconCustomization,
     val tag: String
     )
 
-data class Customization(
+data class HenrikIconCustomization(
     val icon: String,
     val image: String,
     val primary_color: String,
@@ -182,91 +203,92 @@ data class Customization(
     val tertiary_color: String
 )
 
-data class Round(
-    val id: String,
+data class HenrikRound(
+    val id: Int,
     val result: String,
     val ceremony: String,
     val winning_team: String,
-    val plant: PlantEvents?,
-    val defuse: DefuseEvents?,
-    val stats: List<PlayerStats>
+    val plant: HenrikPlantEvents?,
+    val defuse: HenrikDefuseEvents?,
+    val stats: List<HenrikPlayerStats>
 )
 
-data class PlantEvents(
+data class HenrikPlantEvents(
     val round_time_in_ms: Int,
     val site: String,
-    val location: Location?,
-    val player: PlayerShort,
-    val players_locations: List<PlayerLocation>?,
+    val location: HenrikLocation?,
+    val player: HenrikPlayerShort,
+    val player_locations: List<HenrikPlayerLocation>?,
 )
 
 
-data class DefuseEvents(
+data class HenrikDefuseEvents(
     val round_time_in_ms: Int,
-    val location: Location?,
-    val player: PlayerShort,
-    val players_locations: List<PlayerLocation>?,
+    val location: HenrikLocation?,
+    val player: HenrikPlayerShort,
+    val player_locations: List<HenrikPlayerLocation>?,
 )
 
 
-data class PlayerShort(
+data class HenrikPlayerShort(
     val puuid: String,
     val name: String,
     val tag: String,
     val team: String
 )
 
-data class PlayerLocation(
-    val player: PlayerShort,
-    val view_radians: Float,
-    val location: Location?
+data class HenrikPlayerLocation(
+    val player: HenrikPlayerShort,
+    val view_radians: Double,
+    val location: HenrikLocation?
 )
 
-data class PlayerStats(
-    val ability_casts: Abilities,
-    val player: PlayerShort,
-    val damage_events: List<DamageEvents>,
-    val stats: Stats,
-    val economy: Economy,
+data class HenrikPlayerStats(
+    val player: HenrikPlayerShort,
+    val ability_casts: HenrikAbilitiesRound,
+    val damage_events: List<HenrikDamageEvents>,
+    val stats: HenrikStats,
+    val economy: HenrikEconomy,
     val was_afk: Boolean,
     val received_penalty: Boolean,
     val stayed_in_spawn: Boolean
 )
 
-data class DamageEvents(
-    val player: PlayerShort,
-    val bodyshots: Int,
+data class HenrikDamageEvents(
+    val player: HenrikPlayerShort,
     val damage: Int,
     val headshots: Int,
+    val bodyshots: Int,
     val legshots: Int
 )
 
-data class Economy(
+data class HenrikEconomy(
     val loadout_value: Int,
-    val weapon: Weapon?,
-    val armor: Armor?,
     val remaining: Int,
+    val weapon: HenrikWeapon?,
+    val armor: HenrikArmor?,
+
 )
 
-data class Armor(
+data class HenrikArmor(
     val id: String,
     val name: String
 )
 
-data class KillEvents(
+data class HenrikKillEvents(
     val round: Int,
     val time_in_round_in_ms: Int,
     val time_in_match_in_ms: Int,
-    val killer: PlayerShort,
-    val victim: PlayerShort,
-    val assistants: List<PlayerShort>,
-    val location: Location?,
-    val weapon: Weapon,
+    val killer: HenrikPlayerShort,
+    val victim: HenrikPlayerShort,
+    val assistants: List<HenrikPlayerShort>,
+    val location: HenrikLocation?,
+    val weapon: HenrikWeapon,
     val secondary_fire_mode: Boolean,
-    val player_locations: List<PlayerLocation>
+    val player_locations: List<HenrikPlayerLocation>
 )
 
-data class Weapon(
+data class HenrikWeapon(
     val id: String,
     val name: String?,
     val type: String?
