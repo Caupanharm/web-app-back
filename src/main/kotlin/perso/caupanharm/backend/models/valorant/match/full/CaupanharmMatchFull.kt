@@ -95,7 +95,7 @@ data class BombEvent(
     val site: String?,
     val location: Location?,
     val player: String,
-    val playersLocations: List<PlayerLocation>?,
+    val playersLocation: List<PlayerLocation>?,
 )
 
 data class PlayerLocation(
