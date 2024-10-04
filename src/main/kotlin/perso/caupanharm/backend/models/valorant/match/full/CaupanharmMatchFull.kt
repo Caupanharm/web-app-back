@@ -95,7 +95,7 @@ data class BombEvent(
     val site: String?,
     val location: Location?,
     val player: String,
-    val playersLocations: List<PlayerLocation>?,
+    val playersLocation: List<PlayerLocation>?,
 )
 
 data class PlayerLocation(
@@ -144,5 +144,5 @@ data class CaupanharmMatchKill(
     val location: Location?,
     val weapon: String?,
     val secondaryFire: Boolean,
-    val playersLocations: List<PlayerLocation>
+    val playerLocations: List<PlayerLocation>
 )
