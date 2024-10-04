@@ -46,7 +46,7 @@ class DataController(private val localDataService: LocalDataService, private val
         return try {
             caupanharmService.getPlayerFromName(username, tag)
         }catch(e: Exception){
-            Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
+            Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e))
         }
     }
 
@@ -56,7 +56,7 @@ class DataController(private val localDataService: LocalDataService, private val
         return try {
             caupanharmService.getStoredMatches(username, tag)
         } catch (e: Exception) {
-            Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
+            Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e))
         }
     }
 
@@ -67,7 +67,7 @@ class DataController(private val localDataService: LocalDataService, private val
             val isInDb = false
             if (isInDb) {
                 val dbData = null
-                return Mono.just(CaupanharmResponse(200, null, dbData)) // TODO récupérer données db
+                return Mono.just(CaupanharmResponse(200, null, bodyType = null, dbData)) // TODO récupérer données db
             } else {
                 return caupanharmService.getMatchFromIdV4(matchId).map { response ->
                     if (response.body is HenrikMatchFull) {
@@ -79,7 +79,7 @@ class DataController(private val localDataService: LocalDataService, private val
                 }
             }
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
+            return Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e))
         }
     }
 

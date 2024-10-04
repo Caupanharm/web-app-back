@@ -9,7 +9,7 @@ data class HenrikAccount(
 ) {
     fun toCaupanharmResponse(): CaupanharmResponse {
         try {
-            val caupanharmAccount = CaupanharmAccount(
+            val caupanharmPlayer = CaupanharmPlayer(
                 puuid = data.puuid,
                 name = "${data.name}#${data.tag}",
                 region = data.region,
@@ -18,9 +18,9 @@ data class HenrikAccount(
                 title = data.title,
                 lastUpdate = data.updated_at
             )
-            return CaupanharmResponse(200, null, caupanharmAccount)
+            return CaupanharmResponse(200, null, bodyType = "player", caupanharmPlayer)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, e)
+            return CaupanharmResponse(500, null, bodyType = "exception", e)
         }
     }
 }

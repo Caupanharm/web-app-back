@@ -19,9 +19,9 @@ data class HenrikMatchFull(
     fun toCaupanharmResponse(): CaupanharmResponse {
         try {
             val caupanharmMatchFull = toCaupanharmMatchFull()
-            return CaupanharmResponse(200, null, caupanharmMatchFull)
+            return CaupanharmResponse(200, null, bodyType = "matchFull", caupanharmMatchFull)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, e)
+            return CaupanharmResponse(500, null, bodyType = "exception", e)
         }
     }
 

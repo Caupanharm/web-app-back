@@ -40,9 +40,9 @@ data class HenrikMatchLight(
     fun toCaupanharmResponse(): CaupanharmResponse{
         try {
             val caupanharmMatchLight = toCaupanharmMatchLight()
-            return CaupanharmResponse(200, null, caupanharmMatchLight)
+            return CaupanharmResponse(200, null, bodyType = "matchLight", caupanharmMatchLight)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, e)
+            return CaupanharmResponse(500, null, bodyType = "exception", e)
         }
     }
 }

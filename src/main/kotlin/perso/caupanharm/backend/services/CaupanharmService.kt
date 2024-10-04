@@ -28,7 +28,7 @@ class CaupanharmService(private val henrikClient: WebClient) {
                         .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
 
                     else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, henrikErrors) }
+                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
                 }
             }
     }
@@ -48,7 +48,7 @@ class CaupanharmService(private val henrikClient: WebClient) {
                         }
 
                     else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, henrikErrors) }
+                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
                 }
             }
     }
@@ -64,10 +64,10 @@ class CaupanharmService(private val henrikClient: WebClient) {
             .exchangeToMono { response ->
                 when (response.statusCode().value()) {
                     in 200..299 -> response.bodyToMono(HenrikMatchFull::class.java)
-                        .map { match -> CaupanharmResponse(200, null, match.toCaupanharmMatchFull()) }
+                        .map { match -> CaupanharmResponse(200, null, bodyType = "matchFull", match.toCaupanharmMatchFull()) }
 
                     else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, henrikErrors) }
+                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
                 }
             }
     }

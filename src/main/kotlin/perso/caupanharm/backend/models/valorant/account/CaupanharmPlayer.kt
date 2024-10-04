@@ -1,6 +1,6 @@
 package perso.caupanharm.backend.models.valorant.account
 
-data class CaupanharmAccount(
+data class CaupanharmPlayer(
     val puuid: String,
     val name: String,
     val region: String,
