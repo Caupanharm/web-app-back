@@ -1,11 +1,16 @@
 package perso.caupanharm.backend.models.caupanharm
 
+import io.hypersistence.utils.hibernate.type.json.JsonType
 import jakarta.persistence.*
+import org.hibernate.annotations.Type
+import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchKill
+import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchPlayer
+import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchRound
+import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchTeam
 
 @Entity
 @Table(name = "Matches")
 data class PostGresMatch(
-
     @Id
     @Column(name = "match_id", nullable = false)
     val matchId: String = "",
@@ -25,23 +30,23 @@ data class PostGresMatch(
     @Column(name = "season", nullable = false)
     val season: String = "",
 
-    @Lob
-    @Column(name = "players", nullable = false)
-    val players: String = "", // JSON serialized List<CaupanharmPlayer>
+    @Type(JsonType::class)
+    @Column(name = "players", columnDefinition="jsonb", nullable = false)
+    val players: List<CaupanharmMatchPlayer> = emptyList(),
 
-    @Lob
-    @Column(name = "teams", nullable = false)
-    val teams: String = "", // JSON serialized List<CaupanharmTeam>
+    @Type(JsonType::class)
+    @Column(name = "teams", columnDefinition="jsonb", nullable = false)
+    val teams: List<CaupanharmMatchTeam> = emptyList(),
 
-    @Lob
-    @Column(name = "rounds", nullable = false)
-    val rounds: String = "", // JSON serialized List<CaupanharmRound>
+    @Type(JsonType::class)
+    @Column(name = "rounds", columnDefinition="jsonb", nullable = false)
+    val rounds: List<CaupanharmMatchRound> = emptyList(),
 
-    @Lob
-    @Column(name = "kills", nullable = false)
-    val kills: String = "" // JSON serialized List<CaupanharmKill>
+    @Type(JsonType::class)
+    @Column(name = "kills", columnDefinition="jsonb", nullable = false)
+    val kills: List<CaupanharmMatchKill> = emptyList()
 ) {
-    // Constructeur par défaut requis par JPA
+
     constructor() : this(
         matchId = "",
         map = "",
@@ -49,9 +54,9 @@ data class PostGresMatch(
         gameStart = "",
         queue = null,
         season = "",
-        players = "",
-        teams = "",
-        rounds = "",
-        kills = ""
+        players = emptyList(),
+        teams = emptyList(),
+        rounds = emptyList(),
+        kills = emptyList()
     )
 }
