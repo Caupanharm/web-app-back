@@ -67,7 +67,7 @@ class DataController(private val localDataService: LocalDataService, private val
             val isInDb = false
             if (isInDb) {
                 val dbData = null
-                return Mono.just(CaupanharmResponse(200, null, bodyType = null, dbData)) // TODO récupérer données db
+                return Mono.just(CaupanharmResponse(200, null, bodyType = "exception", dbData)) // TODO récupérer données db
             } else {
                 return caupanharmService.getMatchFromIdV4(matchId).map { response ->
                     if (response.body is HenrikMatchFull) {
