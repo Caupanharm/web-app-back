@@ -11,7 +11,7 @@ public class Utils {
         // TODO move these functions to the corresponding data classes
         fun caupanharmToPostgresMatch(match: CaupanharmMatchFull): PostGresMatch {
             return PostGresMatch(
-                match.metadata.matchId,
+                match.metadata.id,
                 match.metadata.map,
                 match.metadata.gameLengthMillis,
                 match.metadata.gameStart,

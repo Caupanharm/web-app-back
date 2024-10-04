@@ -9,7 +9,7 @@ data class CaupanharmMatchFull(
 )
 
 data class CaupanharmMatchMetadata(
-    val matchId: String,
+    val id: String,
     val map: String,
     val gameLengthMillis: Int,
     val gameStart: String,
