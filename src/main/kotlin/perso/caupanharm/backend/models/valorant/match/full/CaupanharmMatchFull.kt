@@ -1,14 +1,14 @@
-package perso.caupanharm.backend.models.caupanharm
+package perso.caupanharm.backend.models.valorant.match.full
 
-data class CaupanharmMatch(
-    val matchInfo: MatchInfo,
-    val players: List<CaupanharmPlayer>,
-    val teams: List<CaupanharmTeam>,
-    val rounds: List<CaupanharmRound>,
-    val kills: List<CaupanharmKill>
+data class CaupanharmMatchFull(
+    val metadata: CaupanharmMatchMetadata,
+    val players: List<CaupanharmMatchPlayer>,
+    val teams: List<CaupanharmMatchTeam>,
+    val rounds: List<CaupanharmMatchRound>,
+    val kills: List<CaupanharmMatchKill>
 )
 
-data class MatchInfo(
+data class CaupanharmMatchMetadata(
     val matchId: String,
     val map: String,
     val gameLengthMillis: Int,
@@ -18,7 +18,7 @@ data class MatchInfo(
     val season: String
 )
 
-data class CaupanharmPlayer(
+data class CaupanharmMatchPlayer(
     val id: String,
     val name: String, // includes tag
     val team: String,
@@ -75,13 +75,13 @@ data class RoundEconomy(
     val armor: String?
 )
 
-data class CaupanharmTeam(
+data class CaupanharmMatchTeam(
     val id: String,
     val allyScore: Int,
     val enemyScore: Int
 )
 
-data class CaupanharmRound(
+data class CaupanharmMatchRound(
     val winningTeam: String,
     val result: String, // issue du round: elimination, defuse, detonate, ""
     val ceremony: String, // clutch, thrifty, etc
@@ -134,7 +134,7 @@ data class DamageEvent(
     val legshots: Int
 )
 
-data class CaupanharmKill(
+data class CaupanharmMatchKill(
     val round: Int,
     val roundTimeMillis: Int,
     val matchTimeMillis: Int,

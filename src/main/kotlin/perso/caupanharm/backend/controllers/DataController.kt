@@ -5,20 +5,18 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
 import perso.caupanharm.backend.repositories.MatchRepository
 import perso.caupanharm.backend.Utils
-import perso.caupanharm.backend.services.HenrikService
+import perso.caupanharm.backend.services.CaupanharmService
 import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
-import perso.caupanharm.backend.models.henrik.HenrikErrors
-import perso.caupanharm.backend.models.henrik.HenrikMatchResponseV4
-import perso.caupanharm.backend.models.henrik.v3.Henrik3Player
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
+import perso.caupanharm.backend.models.valorant.match.full.HenrikMatchFull
 import reactor.core.publisher.Mono
 
 @RestController
 @RequestMapping("/api")
-class DataController(private val localDataService: LocalDataService, private val henrikService: HenrikService) {
+class DataController(private val localDataService: LocalDataService, private val caupanharmService: CaupanharmService) {
     private val logger = KotlinLogging.logger {}
 
     @Autowired
@@ -45,51 +43,44 @@ class DataController(private val localDataService: LocalDataService, private val
     @GetMapping("/player/{username}/{tag}")
     fun getPlayer(@PathVariable username: String, @PathVariable tag: String): Any {
         logger.info("Endpoint fetched: player")
-        return henrikService.getPlayerFromName(username, tag)
-    }
-
-    @GetMapping("/matches/light/{username}/{tag}")
-    fun getPlayerMatchesLight(@PathVariable username: String, @PathVariable tag: String): Any {
-        logger.info("Endpoint fetched: matches light")
-        val uuidQuery: Mono<Any> = henrikService.getPlayerFromName(username, tag)
-        return uuidQuery.flatMap { result ->
-            when (result) {
-                is Henrik3Player -> Mono.just(henrikService.getMatchesLightFromUUID(result.data.puuid))
-                is HenrikErrors -> Mono.just(result)
-                else -> Mono.error(IllegalArgumentException("Unexpected type"))
-            }
+        return try {
+            caupanharmService.getPlayerFromName(username, tag)
+        }catch(e: Exception){
+            Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
         }
     }
 
-    @GetMapping("/matches/{name}/{tag}")
-    fun getPlayerMatches(@PathVariable name: String, @PathVariable tag: String): Mono<Any> {
+    @GetMapping("/matches/{username}/{tag}")
+    fun getStoredMatches(@PathVariable username: String, @PathVariable tag: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: matches")
-        return henrikService.getStoredMatches(name, tag)
+        return try {
+            caupanharmService.getStoredMatches(username, tag)
+        } catch (e: Exception) {
+            Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
+        }
     }
 
     @GetMapping("/match")
     fun getMatch(@RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match")
-
-
-        val isInDb = false
-        /*
-        Regarder si le match est déjà dans la db, l'y ajouter le cas échéant
-         */
-        if(isInDb){
-            val dbData = null
-            return Mono.just(CaupanharmResponse(false, null, dbData)) // TODO récupérer données db
-        }else{
-            return henrikService.getMatchFromIdV4(matchId).map { response ->
-                if (response is HenrikMatchResponseV4) {
-                    repository.save(Utils.caupanharmToPostgresMatch(Utils.henrikToCaupanharmMatch(response)))
-                    CaupanharmResponse(resolved = true, errorCode = null, body = Utils.henrikToCaupanharmMatch(response))
-                } else {
-                    CaupanharmResponse(resolved = false, errorCode = null, body = response) // TODO adapter codes et réponse
+        try {
+            val isInDb = false
+            if (isInDb) {
+                val dbData = null
+                return Mono.just(CaupanharmResponse(200, null, dbData)) // TODO récupérer données db
+            } else {
+                return caupanharmService.getMatchFromIdV4(matchId).map { response ->
+                    if (response.body is HenrikMatchFull) {
+                        repository.save(Utils.caupanharmToPostgresMatch(response.body.toCaupanharmMatchFull())) // TODO passer le toPostGresMatch directement dans CaupanharmMatchFull
+                        response
+                    } else {
+                        response
+                    }
                 }
             }
+        } catch (e: Exception) {
+            return Mono.just(CaupanharmResponse(500, errorCode = null, body = e))
         }
-
     }
 
 }
