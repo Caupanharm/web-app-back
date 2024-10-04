@@ -69,7 +69,7 @@ data class TotalEconomy(
 )
 
 data class RoundEconomy(
-    val loadout_value: Int,
+    val loadoutValue: Int,
     val remaining: Int,
     val weapon: String?,
     val armor: String?
