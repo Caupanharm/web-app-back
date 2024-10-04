@@ -10,7 +10,7 @@ version = "0.0.1-SNAPSHOT"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -29,6 +29,7 @@ dependencies {
 	implementation("org.springframework.data:spring-data-commons:3.3.0")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.postgresql:postgresql:42.7.4")
+	implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.8.3")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("ch.qos.logback:logback-classic:1.5.0")
