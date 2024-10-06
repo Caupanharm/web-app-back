@@ -11,7 +11,7 @@ data class HenrikMatches(
 ){
     fun toCaupanharmMatches(): CaupanharmMatches{
         return CaupanharmMatches(
-            dataInitialSize = results.returned,
+            dataInitialSize = data.size,
             data = data.map { match -> match.toCaupanharmMatchLight() }
         )
     }

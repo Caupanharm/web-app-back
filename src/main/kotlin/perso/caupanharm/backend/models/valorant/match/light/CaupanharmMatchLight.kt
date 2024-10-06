@@ -2,7 +2,8 @@ package perso.caupanharm.backend.models.valorant.match.light
 
 data class CaupanharmMatchLight(
     val metadata: CaupanharmMatchLightMetadata,
-    val stats: CaupanharmMatchLightStats
+    val stats: CaupanharmMatchLightStats,
+    val formattedStats: CaupanharmMatchLightFormatted
 )
 
 data class CaupanharmMatchLightMetadata(
@@ -29,4 +30,16 @@ data class CaupanharmMatchLightStats(
     val legshots: Int,
     val damageDealt: Int,
     val damageReceived: Int
+)
+
+data class CaupanharmMatchLightFormatted(
+    val gameIssue: String,
+    val kda: String,
+    val kd: Double,
+    val dd: Int,
+    val hsp: Int,
+    val bsp: Int,
+    val lsp: Int,
+    val adr: Int,
+    val acs: Int
 )

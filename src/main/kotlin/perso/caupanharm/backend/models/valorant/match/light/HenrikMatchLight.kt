@@ -1,5 +1,6 @@
 package perso.caupanharm.backend.models.valorant.match.light
 
+import perso.caupanharm.backend.Utils
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 
 
@@ -20,8 +21,8 @@ data class HenrikMatchLight(
             ),
             stats = CaupanharmMatchLightStats(
                 team = stats.team,
-                allyScore = if (stats.team == "Blue") teams.blue!! else teams.red!!,
-                enemyScore = if(stats.team == "Blue") teams.red!! else teams.blue!!,
+                allyScore = if (stats.team == "Blue") teams.blue ?: 0 else teams.red ?: 0,
+                enemyScore = if(stats.team == "Blue") teams.red ?: 0 else teams.blue ?: 0,
                 agent = stats.character.name!!,
                 tier = stats.tier,
                 combatScore = stats.score,
@@ -31,8 +32,19 @@ data class HenrikMatchLight(
                 headshots = stats.shots.head,
                 bodyshots = stats.shots.body,
                 legshots = stats.shots.leg,
-                damageDealt = stats.damage.dealt,
+                damageDealt = stats.damage.made,
                 damageReceived = stats.damage.received
+            ),
+            formattedStats = CaupanharmMatchLightFormatted(
+                gameIssue = Utils.computeGameIssue(stats.team, teams.blue, teams.red),
+                kda = Utils.computeKDA(stats.kills, stats.deaths, stats.assists),
+                kd = Utils.computeKD(stats.kills, stats.deaths),
+                dd = Utils.computeDD(stats.damage.made, stats.damage.received, teams.red ?: 0, teams.blue ?: 0),
+                hsp = Utils.computeHSP(stats.shots.head, stats.shots.body, stats.shots.leg),
+                bsp = Utils.computeBSP(stats.shots.head, stats.shots.body, stats.shots.leg),
+                lsp = Utils.computeLSP(stats.shots.head, stats.shots.body, stats.shots.leg),
+                adr = Utils.computeADR(stats.damage.made, teams.red ?: 0, teams.blue ?: 0),
+                acs = Utils.computeACS(stats.score, teams.red ?: 0, teams.blue ?: 0)
             )
         )
     }
@@ -94,7 +106,7 @@ data class HenrikMatchLightStatsShots(
 )
 
 data class HenrikMatchLightStatsDamage(
-    val dealt: Int,
+    val made: Int,
     val received: Int
 )
 
