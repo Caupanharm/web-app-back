@@ -20,37 +20,45 @@ class CaupanharmService(private val henrikClient: WebClient) {
 
     fun getPlayerFromName(username: String, tag: String): Mono<CaupanharmResponse> {
         logger.info("GET  /valorant/v2/account/$username/$tag?force=true")
-        return henrikClient.get()
-            .uri("/valorant/v2/account/$username/$tag?force=true")
-            .exchangeToMono { response ->
-                when (response.statusCode().value()) {
-                    in 200..299 -> response.bodyToMono(HenrikAccount::class.java)
-                        .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
+        try {
+            return henrikClient.get()
+                .uri("/valorant/v2/account/$username/$tag?force=true")
+                .exchangeToMono { response ->
+                    when (response.statusCode().value()) {
+                        in 200..299 -> response.bodyToMono(HenrikAccount::class.java)
+                            .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
 
-                    else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                        else -> response.bodyToMono(HenrikErrors::class.java)
+                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            return Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
+        }
     }
 
 
     fun getStoredMatches(name: String, tag: String): Mono<CaupanharmResponse> {
         logger.info("GET  /valorant/v1/stored-matches/eu/$name/$tag?mode=competitive")
-        return henrikClient.get()
-            .uri("valorant/v1/stored-matches/eu/$name/$tag?mode=competitive")
-            .exchangeToMono { response ->
-                when (response.statusCode().value()) {
-                    in 200..299 -> response.bodyToMono(HenrikMatches::class.java)
-                        .map { matches ->
-                            // Filtrer la liste data pour ne garder que les éléments de la saison en cours
-                            val filteredData = matches.data.filter { it.meta.season.short == currentValSeason }
-                            matches.copy(data = filteredData).toCaupanharmResponse()
-                        }
+        try {
+            return henrikClient.get()
+                .uri("valorant/v1/stored-matches/eu/$name/$tag?mode=competitive")
+                .exchangeToMono { response ->
+                    when (response.statusCode().value()) {
+                        in 200..299 -> response.bodyToMono(HenrikMatches::class.java)
+                            .map { matches ->
+                                // Filtrer la liste data pour ne garder que les éléments de la saison en cours
+                                val filteredData = matches.data.filter { it.meta.season.short == currentValSeason }
+                                matches.copy(data = filteredData).toCaupanharmResponse()
+                            }
 
-                    else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                        else -> response.bodyToMono(HenrikErrors::class.java)
+                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            return Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
+        }
     }
 
     fun getMatchFromIdV4(matchId: String, total: Int? = null, current: Int? = null): Mono<CaupanharmResponse> {
@@ -59,16 +67,29 @@ class CaupanharmService(private val henrikClient: WebClient) {
         } else {
             logger.info("GET  /valorant/v4/match/eu/$matchId ($current/$total)")
         }
-        return henrikClient.get()
-            .uri("https://api.henrikdev.xyz/valorant/v4/match/eu/$matchId")
-            .exchangeToMono { response ->
-                when (response.statusCode().value()) {
-                    in 200..299 -> response.bodyToMono(HenrikMatchFull::class.java)
-                        .map { match -> CaupanharmResponse(200, null, bodyType = "matchFull", match.toCaupanharmMatchFull()) }
+        try {
+            return henrikClient.get()
+                .uri("https://api.henrikdev.xyz/valorant/v4/match/eu/$matchId")
+                .exchangeToMono { response ->
+                    when (response.statusCode().value()) {
+                        in 200..299 -> response.bodyToMono(HenrikMatchFull::class.java)
+                            .map { match ->
+                                CaupanharmResponse(
+                                    200,
+                                    null,
+                                    bodyType = "matchFull",
+                                    match.toCaupanharmMatchFull()
+                                )
+                            }
 
-                    else -> response.bodyToMono(HenrikErrors::class.java)
-                        .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                        else -> response.bodyToMono(HenrikErrors::class.java)
+                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            return Mono.just(CaupanharmResponse(500, null, bodyType = "exception", e.toString()))
+        }
+
+
     }
 }

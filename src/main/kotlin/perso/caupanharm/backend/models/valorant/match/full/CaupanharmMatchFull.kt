@@ -44,10 +44,10 @@ data class CaupanharmPlayerStats(
 )
 
 data class CaupanharmAbilities(
-    val ability1: Int,
-    val ability2: Int,
-    val ability3: Int, // noted as "grenade" on Riot's and Henrik's side
-    val ultimate: Int
+    val ability1: Int?,
+    val ability2: Int?,
+    val ability3: Int?, // noted as "grenade" on Riot's and Henrik's side
+    val ultimate: Int?
 )
 
 data class BehaviorSummary(

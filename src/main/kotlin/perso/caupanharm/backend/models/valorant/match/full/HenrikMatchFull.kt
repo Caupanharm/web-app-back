@@ -155,10 +155,10 @@ data class HenrikMatchFull(
                 RoundPlayerStats(
                     player.player.name + "#" + player.player.tag,
                     CaupanharmAbilities(
-                        player.ability_casts.ability_1 ?: 0,
-                        player.ability_casts.ability_2 ?: 0,
-                        player.ability_casts.grenade ?: 0,
-                        player.ability_casts.ultimate ?: 0
+                        player.ability_casts.ability_1,
+                        player.ability_casts.ability_2,
+                        player.ability_casts.grenade,
+                        player.ability_casts.ultimate
                     ),
                     toDamageEvents(player.damage_events),
                     RoundPlayerStatsRecap(
@@ -365,10 +365,10 @@ data class HenrikEconomyShort(
 )
 
 data class HenrikAbilitiesPlayer(
-    val grenade: Int,
-    val ability1: Int,
-    val ability2: Int,
-    val ultimate: Int
+    val grenade: Int?,
+    val ability1: Int?,
+    val ability2: Int?,
+    val ultimate: Int?
 )
 
 
