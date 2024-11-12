@@ -5,10 +5,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
-import perso.caupanharm.backend.models.valorant.account.HenrikAccount
+import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.henrik.HenrikErrors
-import perso.caupanharm.backend.models.valorant.match.full.HenrikMatchFull
-import perso.caupanharm.backend.models.valorant.matches.HenrikMatches
+import perso.caupanharm.backend.models.caupanharm.valorant.match.full.HenrikMatchFull
+import perso.caupanharm.backend.models.caupanharm.valorant.matches.HenrikMatches
 import reactor.core.publisher.Mono
 
 @Service
@@ -20,8 +20,8 @@ class CaupanharmService(private val henrikClient: WebClient) {
 
     fun getPlayerFromName(username: String, tag: String): Mono<CaupanharmResponse> {
         logger.info("GET  /valorant/v2/account/$username/$tag?force=true")
-        try {
-            return henrikClient.get()
+        return try {
+            henrikClient.get()
                 .uri("/valorant/v2/account/$username/$tag?force=true")
                 .exchangeToMono { response ->
                     when (response.statusCode().value()) {
@@ -33,7 +33,7 @@ class CaupanharmService(private val henrikClient: WebClient) {
                     }
                 }
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
+            Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
         }
     }
 

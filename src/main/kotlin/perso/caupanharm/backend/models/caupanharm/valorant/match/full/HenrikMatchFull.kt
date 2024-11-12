@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.valorant.match.full
+package perso.caupanharm.backend.models.caupanharm.valorant.match.full
 
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 
@@ -6,7 +6,7 @@ data class HenrikMatchFull(
     val status: Int,
     val data: HenrikMatchFullData
 ){
-    fun toCaupanharmMatchFull(): CaupanharmMatchFull{
+    fun toCaupanharmMatchFull(): CaupanharmMatchFull {
         return CaupanharmMatchFull(
             toCaupanharmMatchMetadata(),
             toCaupanharmMatchPlayers(),
@@ -25,7 +25,7 @@ data class HenrikMatchFull(
         }
     }
 
-    fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata{
+    fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata {
         return CaupanharmMatchMetadata(
             data.metadata.match_id,
             data.metadata.map.name,
@@ -113,7 +113,7 @@ data class HenrikMatchFull(
         return caupanharmRounds
     }
 
-    fun toRoundPlantEvent(event: HenrikPlantEvents): BombEvent{
+    fun toRoundPlantEvent(event: HenrikPlantEvents): BombEvent {
         return BombEvent(
             event.round_time_in_ms,
             event.site,
@@ -123,7 +123,7 @@ data class HenrikMatchFull(
         )
     }
 
-    fun toRoundDefuseEvent(event: HenrikDefuseEvents): BombEvent{
+    fun toRoundDefuseEvent(event: HenrikDefuseEvents): BombEvent {
         return BombEvent(
             event.round_time_in_ms,
             null,

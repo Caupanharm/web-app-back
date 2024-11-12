@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.valorant.match.light
+package perso.caupanharm.backend.models.caupanharm.valorant.match.light
 
 data class CaupanharmMatchLight(
     val metadata: CaupanharmMatchLightMetadata,

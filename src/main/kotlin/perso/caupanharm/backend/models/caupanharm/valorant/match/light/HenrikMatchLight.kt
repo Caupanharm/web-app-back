@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.valorant.match.light
+package perso.caupanharm.backend.models.caupanharm.valorant.match.light
 
 import perso.caupanharm.backend.Utils
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
@@ -9,7 +9,7 @@ data class HenrikMatchLight(
     val stats: HenrikMatchLightStats,
     val teams: HenrikMatchLightTeams,
 ){
-    fun toCaupanharmMatchLight(): CaupanharmMatchLight{
+    fun toCaupanharmMatchLight(): CaupanharmMatchLight {
         return CaupanharmMatchLight(
             metadata = CaupanharmMatchLightMetadata(
                 id = meta.id,

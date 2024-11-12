@@ -1,7 +1,7 @@
-package perso.caupanharm.backend.models.valorant.matches
+package perso.caupanharm.backend.models.caupanharm.valorant.matches
 
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
-import perso.caupanharm.backend.models.valorant.match.light.HenrikMatchLight
+import perso.caupanharm.backend.models.caupanharm.valorant.match.light.HenrikMatchLight
 
 // /valorant/v1/stored-matches/{region}/{name}/{tag}
 data class HenrikMatches(
@@ -9,7 +9,7 @@ data class HenrikMatches(
     val results: Results,
     val data: List<HenrikMatchLight>
 ){
-    fun toCaupanharmMatches(): CaupanharmMatches{
+    fun toCaupanharmMatches(): CaupanharmMatches {
         return CaupanharmMatches(
             dataInitialSize = data.size,
             data = data.map { match -> match.toCaupanharmMatchLight() }

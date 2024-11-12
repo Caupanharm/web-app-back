@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.valorant.account
+package perso.caupanharm.backend.models.caupanharm.valorant.account
 
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 
