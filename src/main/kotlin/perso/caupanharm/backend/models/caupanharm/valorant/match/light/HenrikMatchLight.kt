@@ -2,6 +2,7 @@ package perso.caupanharm.backend.models.caupanharm.valorant.match.light
 
 import perso.caupanharm.backend.Utils
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
+import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 
 
 data class HenrikMatchLight(
@@ -52,9 +53,9 @@ data class HenrikMatchLight(
     fun toCaupanharmResponse(): CaupanharmResponse{
         try {
             val caupanharmMatchLight = toCaupanharmMatchLight()
-            return CaupanharmResponse(200, null, bodyType = "matchLight", caupanharmMatchLight)
+            return CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_LIGHT, caupanharmMatchLight)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, bodyType = "exception", e)
+            return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e)
         }
     }
 }

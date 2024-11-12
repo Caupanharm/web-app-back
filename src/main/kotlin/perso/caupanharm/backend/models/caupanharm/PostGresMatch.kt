@@ -6,7 +6,7 @@ import org.hibernate.annotations.Type
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.*
 
 @Entity
-@Table(name = "Matches")
+@Table(name = "matches")
 data class PostGresMatch(
     @Id
     @Column(name = "match_id", nullable = false)

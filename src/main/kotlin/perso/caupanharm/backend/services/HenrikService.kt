@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
+import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.henrik.HenrikErrors
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.HenrikMatchFull
@@ -12,7 +13,7 @@ import perso.caupanharm.backend.models.caupanharm.valorant.matches.HenrikMatches
 import reactor.core.publisher.Mono
 
 @Service
-class CaupanharmService(private val henrikClient: WebClient) {
+class HenrikService(private val henrikClient: WebClient) {
     private val logger = KotlinLogging.logger {}
 
     @Value("\${valorant.season.current}")
@@ -29,11 +30,11 @@ class CaupanharmService(private val henrikClient: WebClient) {
                             .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
 
                         else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                            .map { henrikErrors -> CaupanharmResponse(502, null, CaupanharmResponseType.EXCEPTION, henrikErrors) }
                     }
                 }
         } catch (e: Exception) {
-            Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
+            Mono.just(CaupanharmResponse(500, errorCode = null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
         }
     }
 
@@ -53,11 +54,11 @@ class CaupanharmService(private val henrikClient: WebClient) {
                             }
 
                         else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                            .map { henrikErrors -> CaupanharmResponse(502, null, CaupanharmResponseType.EXCEPTION, henrikErrors) }
                     }
                 }
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, errorCode = null, bodyType = "exception", body = e.toString()))
+            return Mono.just(CaupanharmResponse(500, errorCode = null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
         }
     }
 
@@ -77,17 +78,17 @@ class CaupanharmService(private val henrikClient: WebClient) {
                                 CaupanharmResponse(
                                     200,
                                     null,
-                                    bodyType = "matchFull",
+                                    CaupanharmResponseType.MATCH_FULL,
                                     match.toCaupanharmMatchFull()
                                 )
                             }
 
                         else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors -> CaupanharmResponse(502, null, bodyType = "exception", henrikErrors) }
+                            .map { henrikErrors -> CaupanharmResponse(502, null, CaupanharmResponseType.EXCEPTION, henrikErrors) }
                     }
                 }
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, null, bodyType = "exception", e.toString()))
+            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
         }
 
 

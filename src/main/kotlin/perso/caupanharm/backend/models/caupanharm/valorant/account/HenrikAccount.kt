@@ -1,6 +1,7 @@
 package perso.caupanharm.backend.models.caupanharm.valorant.account
 
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
+import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 
 // /valorant/v2/account/{name}/{tag}
 data class HenrikAccount(
@@ -18,9 +19,9 @@ data class HenrikAccount(
                 title = data.title,
                 lastUpdate = data.updated_at
             )
-            return CaupanharmResponse(200, null, bodyType = "player", caupanharmPlayer)
+            return CaupanharmResponse(200, null, CaupanharmResponseType.PLAYER, caupanharmPlayer)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, bodyType = "exception", e)
+            return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e)
         }
     }
 }

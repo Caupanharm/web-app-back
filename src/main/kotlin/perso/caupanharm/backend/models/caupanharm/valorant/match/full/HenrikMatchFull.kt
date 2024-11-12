@@ -1,6 +1,7 @@
 package perso.caupanharm.backend.models.caupanharm.valorant.match.full
 
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
+import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 
 data class HenrikMatchFull(
     val status: Int,
@@ -19,9 +20,9 @@ data class HenrikMatchFull(
     fun toCaupanharmResponse(): CaupanharmResponse {
         try {
             val caupanharmMatchFull = toCaupanharmMatchFull()
-            return CaupanharmResponse(200, null, bodyType = "matchFull", caupanharmMatchFull)
+            return CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, caupanharmMatchFull)
         } catch (e: Exception) {
-            return CaupanharmResponse(500, null, bodyType = "exception", e)
+            return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e)
         }
     }
 
