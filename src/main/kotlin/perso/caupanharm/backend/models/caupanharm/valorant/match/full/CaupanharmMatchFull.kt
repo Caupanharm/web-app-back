@@ -1,4 +1,6 @@
-package perso.caupanharm.backend.models.valorant.match.full
+package perso.caupanharm.backend.models.caupanharm.valorant.match.full
+
+import perso.caupanharm.backend.models.caupanharm.PostGresMatch
 
 data class CaupanharmMatchFull(
     val metadata: CaupanharmMatchMetadata,
@@ -6,7 +8,22 @@ data class CaupanharmMatchFull(
     val teams: List<CaupanharmMatchTeam>,
     val rounds: List<CaupanharmMatchRound>,
     val kills: List<CaupanharmMatchKill>
-)
+){
+    fun toPostgresMatch(): PostGresMatch{
+        return PostGresMatch(
+            metadata.id,
+            metadata.map,
+            metadata.gameLengthMillis,
+            metadata.gameStart,
+            metadata.queue,
+            metadata.season,
+            players,
+            teams,
+            rounds,
+            kills
+        )
+    }
+}
 
 data class CaupanharmMatchMetadata(
     val id: String,

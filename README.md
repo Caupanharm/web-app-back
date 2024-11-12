@@ -30,14 +30,15 @@ Caupanharm only serves data encapsulated in the CaupanharmResponse data class, c
 
 Possible body types are defined as :
 
-| status code | body class           | body type  |
-|-------------|----------------------|------------|
-| 200         | CaupanharmPlayer     | player     |
-| 200         | CaupanharmMatches    | matches    |
-| 200         | CaupanharmMatchLight | matchLight |
-| 200         | CaupanharmMatchFull  | matchFull  |
-| 500         | Exception            | exception  |
-| 502         | HenrikErrors         | exception  |
+| status code | body class           | body type     |
+|-------------|----------------------|---------------|
+| 200         | CaupanharmPlayer     | player        |
+| 200         | CaupanharmMatches    | matches       |
+| 200         | CaupanharmMatchLight | matchLight    |
+| 200         | CaupanharmMatchFull  | matchFull     |
+| 200         | FullMatchAnalysis    | matchAnalysis |
+| 500         | Exception            | exception     |
+| 502         | HenrikErrors         | exception     |
 
 Exceptions and error handling shall be worked on in a future update. Until then the front app will receive them as they are.
 

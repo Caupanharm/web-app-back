@@ -3,10 +3,7 @@ package perso.caupanharm.backend.models.caupanharm
 import io.hypersistence.utils.hibernate.type.json.JsonType
 import jakarta.persistence.*
 import org.hibernate.annotations.Type
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchKill
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchPlayer
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchRound
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchTeam
+import perso.caupanharm.backend.models.caupanharm.valorant.match.full.*
 
 @Entity
 @Table(name = "Matches")
@@ -31,19 +28,19 @@ data class PostGresMatch(
     val season: String = "",
 
     @Type(JsonType::class)
-    @Column(name = "players", columnDefinition="jsonb", nullable = false)
+    @Column(name = "players", columnDefinition = "jsonb", nullable = false)
     val players: List<CaupanharmMatchPlayer> = emptyList(),
 
     @Type(JsonType::class)
-    @Column(name = "teams", columnDefinition="jsonb", nullable = false)
+    @Column(name = "teams", columnDefinition = "jsonb", nullable = false)
     val teams: List<CaupanharmMatchTeam> = emptyList(),
 
     @Type(JsonType::class)
-    @Column(name = "rounds", columnDefinition="jsonb", nullable = false)
+    @Column(name = "rounds", columnDefinition = "jsonb", nullable = false)
     val rounds: List<CaupanharmMatchRound> = emptyList(),
 
     @Type(JsonType::class)
-    @Column(name = "kills", columnDefinition="jsonb", nullable = false)
+    @Column(name = "kills", columnDefinition = "jsonb", nullable = false)
     val kills: List<CaupanharmMatchKill> = emptyList()
 ) {
 
@@ -59,4 +56,22 @@ data class PostGresMatch(
         rounds = emptyList(),
         kills = emptyList()
     )
+
+    fun toCaupanharmMatchFull(): CaupanharmMatchFull {
+        return CaupanharmMatchFull(
+            CaupanharmMatchMetadata(
+                matchId,
+                map,
+                gameLengthMillis,
+                gameStart,
+                true,
+                queue,
+                season
+            ),
+            players,
+            teams,
+            rounds,
+            kills
+        )
+    }
 }

@@ -1,56 +1,17 @@
 package perso.caupanharm.backend
 
-import perso.caupanharm.backend.models.caupanharm.*
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchFull
-import perso.caupanharm.backend.models.valorant.match.full.CaupanharmMatchMetadata
 import kotlin.math.round
-
 
 public class Utils {
 
     companion object {
-        // TODO move this function to the corresponding data classe
-        fun caupanharmToPostgresMatch(match: CaupanharmMatchFull): PostGresMatch {
-            return PostGresMatch(
-                match.metadata.id,
-                match.metadata.map,
-                match.metadata.gameLengthMillis,
-                match.metadata.gameStart,
-                match.metadata.queue,
-                match.metadata.season,
-                match.players,
-                match.teams,
-                match.rounds,
-                match.kills
-            )
-        }
-
-        // TODO move this function to the corresponding data classe
-        fun postgresToCaupanharmMatch(match: PostGresMatch): CaupanharmMatchFull {
-            return CaupanharmMatchFull(
-                CaupanharmMatchMetadata(
-                    match.matchId,
-                    match.map,
-                    match.gameLengthMillis,
-                    match.gameStart,
-                    true,
-                    match.queue,
-                    match.season
-                ),
-                match.players,
-                match.teams,
-                match.rounds,
-                match.kills
-            )
-        }
-
         fun computeGameIssue(team: String, blueScore: Int?, redScore: Int?): String {
             val allyScore = if (team == "Blue") blueScore ?: 0 else redScore ?: 0
             val enemyScore = if (team == "Blue") redScore ?: 0 else blueScore ?: 0
 
-            return if(allyScore + enemyScore == 0) ""
-            else if(allyScore > enemyScore) "win"
-            else if(allyScore < enemyScore) "lose"
+            return if (allyScore + enemyScore == 0) ""
+            else if (allyScore > enemyScore) "win"
+            else if (allyScore < enemyScore) "lose"
             else "draw"
         }
 
