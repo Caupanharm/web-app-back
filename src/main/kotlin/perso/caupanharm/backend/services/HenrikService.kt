@@ -34,7 +34,7 @@ class HenrikService(private val henrikClient: WebClient) {
                     }
                 }
         } catch (e: Exception) {
-            Mono.just(CaupanharmResponse(500, errorCode = null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
+            Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
         }
     }
 
@@ -58,7 +58,7 @@ class HenrikService(private val henrikClient: WebClient) {
                     }
                 }
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, errorCode = null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
+            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
         }
     }
 
