@@ -10,9 +10,8 @@ data class HenrikMatches(
     val results: Results,
     val data: List<HenrikMatchLight>
 ){
-    fun toCaupanharmMatches(): CaupanharmMatches {
-        return CaupanharmMatches(
-            dataInitialSize = data.size,
+    fun toCaupanharmMatches(): CaupanharmMatchHistoryLight {
+        return CaupanharmMatchHistoryLight(
             data = data.map { match -> match.toCaupanharmMatchLight() }
         )
     }
