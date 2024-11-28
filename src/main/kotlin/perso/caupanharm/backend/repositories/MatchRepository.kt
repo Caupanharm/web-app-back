@@ -2,9 +2,8 @@ package perso.caupanharm.backend.repositories
 
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
-import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
-import perso.caupanharm.backend.models.caupanharm.PostGresMatch
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatch
 
 @Repository
 interface MatchRepository : CrudRepository<PostGresMatch, String> {

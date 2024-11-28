@@ -1,6 +1,6 @@
 package perso.caupanharm.backend.models.caupanharm.valorant.match.full
 
-import perso.caupanharm.backend.models.caupanharm.PostGresMatch
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatch
 
 data class CaupanharmMatchFull(
     val metadata: CaupanharmMatchMetadata,
@@ -9,7 +9,7 @@ data class CaupanharmMatchFull(
     val rounds: List<CaupanharmMatchRound>,
     val kills: List<CaupanharmMatchKill>
 ){
-    fun toPostgresMatch(): PostGresMatch{
+    fun toPostgresMatch(): PostGresMatch {
         return PostGresMatch(
             metadata.id,
             metadata.map,

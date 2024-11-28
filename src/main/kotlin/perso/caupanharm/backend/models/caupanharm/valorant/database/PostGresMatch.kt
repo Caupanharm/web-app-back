@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.caupanharm
+package perso.caupanharm.backend.models.caupanharm.valorant.database
 
 import io.hypersistence.utils.hibernate.type.json.JsonType
 import jakarta.persistence.*
