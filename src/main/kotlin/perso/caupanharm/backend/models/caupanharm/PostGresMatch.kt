@@ -32,8 +32,8 @@ data class PostGresMatch(
     val players: List<CaupanharmMatchPlayer> = emptyList(),
 
     @Type(JsonType::class)
-    @Column(name = "teams", columnDefinition = "jsonb", nullable = false)
-    val teams: List<CaupanharmMatchTeam> = emptyList(),
+    @Column(name = "score", columnDefinition = "jsonb", nullable = false)
+    val score: CaupanharmMatchScore,
 
     @Type(JsonType::class)
     @Column(name = "rounds", columnDefinition = "jsonb", nullable = false)
@@ -52,7 +52,7 @@ data class PostGresMatch(
         queue = null,
         season = "",
         players = emptyList(),
-        teams = emptyList(),
+        score = CaupanharmMatchScore(0, 0),
         rounds = emptyList(),
         kills = emptyList()
     )
@@ -69,7 +69,7 @@ data class PostGresMatch(
                 season
             ),
             players,
-            teams,
+            score,
             rounds,
             kills
         )

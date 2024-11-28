@@ -5,7 +5,7 @@ import perso.caupanharm.backend.models.caupanharm.PostGresMatch
 data class CaupanharmMatchFull(
     val metadata: CaupanharmMatchMetadata,
     val players: List<CaupanharmMatchPlayer>,
-    val teams: List<CaupanharmMatchTeam>,
+    val score: CaupanharmMatchScore,
     val rounds: List<CaupanharmMatchRound>,
     val kills: List<CaupanharmMatchKill>
 ){
@@ -18,7 +18,7 @@ data class CaupanharmMatchFull(
             metadata.queue,
             metadata.season,
             players,
-            teams,
+            score,
             rounds,
             kills
         )
@@ -92,10 +92,9 @@ data class RoundEconomy(
     val armor: String?
 )
 
-data class CaupanharmMatchTeam(
-    val id: String,
-    val allyScore: Int,
-    val enemyScore: Int
+data class CaupanharmMatchScore(
+    val blue: Int,
+    val red: Int
 )
 
 data class CaupanharmMatchRound(

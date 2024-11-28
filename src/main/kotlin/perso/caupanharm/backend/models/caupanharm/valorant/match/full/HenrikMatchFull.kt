@@ -11,7 +11,7 @@ data class HenrikMatchFull(
         return CaupanharmMatchFull(
             toCaupanharmMatchMetadata(),
             toCaupanharmMatchPlayers(),
-            toCaupanharmMatchTeams(),
+            toCaupanharmMatchScore(),
             toCaupanharmMatchRounds(),
             toCaupanharmMatchKills()
         )
@@ -26,7 +26,7 @@ data class HenrikMatchFull(
         }
     }
 
-    fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata {
+    private fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata {
         return CaupanharmMatchMetadata(
             data.metadata.match_id,
             data.metadata.map.name,
@@ -38,7 +38,7 @@ data class HenrikMatchFull(
         )
     }
 
-    fun toCaupanharmMatchPlayers(): List<CaupanharmMatchPlayer>{
+    private fun toCaupanharmMatchPlayers(): List<CaupanharmMatchPlayer>{
         val caupanharmPlayers = mutableListOf<CaupanharmMatchPlayer>()
         data.players.forEach { player ->
             caupanharmPlayers.add(
@@ -83,21 +83,15 @@ data class HenrikMatchFull(
         return caupanharmPlayers
     }
 
-    fun toCaupanharmMatchTeams(): List<CaupanharmMatchTeam>{
-        val caupanharmTeams = mutableListOf<CaupanharmMatchTeam>()
-        data.teams.forEach { team ->
-            caupanharmTeams.add(
-                CaupanharmMatchTeam(
-                    team.team_id,
-                    team.rounds.won,
-                    team.rounds.lost
-                )
-            )
+    private fun toCaupanharmMatchScore(): CaupanharmMatchScore{
+        return if(data.teams[0].team_id == "blue") { // might be always true if Henrik's api is consistent here
+            CaupanharmMatchScore(data.teams[0].rounds.won, data.teams[0].rounds.lost)
+        }else{ // case "red"
+            CaupanharmMatchScore(data.teams[1].rounds.won, data.teams[1].rounds.lost)
         }
-        return caupanharmTeams
     }
 
-    fun toCaupanharmMatchRounds(): List<CaupanharmMatchRound>{
+    private fun toCaupanharmMatchRounds(): List<CaupanharmMatchRound>{
         val caupanharmRounds = mutableListOf<CaupanharmMatchRound>()
         data.rounds.forEach { round ->
             caupanharmRounds.add(
@@ -114,7 +108,7 @@ data class HenrikMatchFull(
         return caupanharmRounds
     }
 
-    fun toRoundPlantEvent(event: HenrikPlantEvents): BombEvent {
+    private fun toRoundPlantEvent(event: HenrikPlantEvents): BombEvent {
         return BombEvent(
             event.round_time_in_ms,
             event.site,
@@ -124,7 +118,7 @@ data class HenrikMatchFull(
         )
     }
 
-    fun toRoundDefuseEvent(event: HenrikDefuseEvents): BombEvent {
+    private fun toRoundDefuseEvent(event: HenrikDefuseEvents): BombEvent {
         return BombEvent(
             event.round_time_in_ms,
             null,
@@ -134,7 +128,7 @@ data class HenrikMatchFull(
         )
     }
 
-    fun toPlayersLocation(playersLocation: List<HenrikPlayerLocation>): List<PlayerLocation>{
+    private fun toPlayersLocation(playersLocation: List<HenrikPlayerLocation>): List<PlayerLocation>{
         return playersLocation.map { playerIt ->
             PlayerLocation(
                 playerIt.player.name + "#" + playerIt.player.tag,
@@ -149,7 +143,7 @@ data class HenrikMatchFull(
         }
     }
 
-    fun toRoundPlayerStats(stats: List<HenrikPlayerStats>): List<RoundPlayerStats>{
+    private fun toRoundPlayerStats(stats: List<HenrikPlayerStats>): List<RoundPlayerStats>{
         val playerStats = mutableListOf<RoundPlayerStats>()
         stats.forEach { player ->
             playerStats.add(
@@ -186,7 +180,7 @@ data class HenrikMatchFull(
         return playerStats
     }
 
-    fun toDamageEvents(events: List<HenrikDamageEvents>): List<DamageEvent>{
+    private fun toDamageEvents(events: List<HenrikDamageEvents>): List<DamageEvent>{
         return events.map { event ->
             DamageEvent(
                 event.player.name + "#" + event.player.tag,
@@ -198,7 +192,7 @@ data class HenrikMatchFull(
         }
     }
 
-    fun toCaupanharmMatchKills(): List<CaupanharmMatchKill>{
+    private fun toCaupanharmMatchKills(): List<CaupanharmMatchKill>{
         val caupanharmKills = mutableListOf<CaupanharmMatchKill>()
         data.kills.forEach { kill ->
             caupanharmKills.add(
