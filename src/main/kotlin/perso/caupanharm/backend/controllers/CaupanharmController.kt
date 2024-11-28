@@ -8,11 +8,15 @@ import perso.caupanharm.backend.services.HenrikService
 import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
+import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
+import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchFull
-import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatches
+import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
+import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryLight
+import perso.caupanharm.backend.models.caupanharm.valorant.raw.RawMatchHistory
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -53,8 +57,48 @@ class CaupanharmController(
         logger.info("Endpoint fetched: player with params: username=${username}")
         val splittedName = username.split('#')
         return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
-
     }
+
+    @GetMapping("/rawHistory")
+    fun getRawHistory(@RequestParam username: String): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: rawHistory with params: username=$username")
+        val splittedName = username.split('#')
+
+        return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
+            .flatMap { playerResponse ->
+                if (playerResponse.statusCode == 200) {
+                    val puuid = (playerResponse.body as CaupanharmPlayer).puuid
+                    henrikService.getRawHistory(puuid)
+                        .map { rawHistoryResponse ->
+                            if (rawHistoryResponse.statusCode == 200) {
+                                CaupanharmResponse(
+                                    200,
+                                    null,
+                                    CaupanharmResponseType.RAW_MATCH_HISTORY,
+                                    rawHistoryResponse.body as RawMatchHistory
+                                )
+                            } else {
+                                CaupanharmResponse(
+                                    500,
+                                    null,
+                                    CaupanharmResponseType.EXCEPTION,
+                                    rawHistoryResponse.body
+                                )
+                            }
+                        }
+                } else {
+                    Mono.just(
+                        CaupanharmResponse(
+                            500,
+                            null,
+                            CaupanharmResponseType.EXCEPTION,
+                            playerResponse.body
+                        )
+                    )
+                }
+            }
+    }
+
 
     @GetMapping("matches")
     fun getStoredMatches(@RequestParam username: String): Mono<CaupanharmResponse> {
@@ -66,16 +110,18 @@ class CaupanharmController(
                 val caupanharmMatches: MutableList<CaupanharmMatchFull> = repository.findByPlayerName(username)
                     .map { it.toCaupanharmMatchFull() }
                     .toMutableList()
-                logger.info(response.toString()                                                          )
+                logger.info(response.toString())
                 if (response.bodyType == CaupanharmResponseType.MATCH_HISTORY) {
                     val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.id }
-                    val allMatchesIds = (response.body as CaupanharmMatches).data.map { it.metadata.id }
+                    val allMatchesIds = (response.body as CaupanharmMatchHistoryLight).data.map { it.metadata.id }
                     val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
+                    var totalMatches = allMatchesIds.size
+                    var savedMatches = caupanharmMatchesIds.size
                     var matchesAdded = 0
-                    logger.info("Matches found: ${allMatchesIds.size}")
-                    logger.info("Matches stored: ${caupanharmMatchesIds.size}")
+                    logger.info("Matches found: $totalMatches")
+                    logger.info("Matches initially stored: ${caupanharmMatchesIds.size}")
 
-                    // Utiliser un Flux pour récupérer tous les matchs manquants
+                    // Flux pour récupérer tous les matchs manquants
                     return@flatMap Flux.fromIterable(missingMatchesIds)
                         .index()
                         .flatMap { tuple ->
@@ -85,22 +131,37 @@ class CaupanharmController(
                                 .filter { it.bodyType == CaupanharmResponseType.MATCH_FULL }
                                 .map { it.body as CaupanharmMatchFull }
                                 .doOnNext { match ->
-                                    try{
+                                    try {
                                         repository.save(match.toPostgresMatch())
                                         matchesAdded++
+                                        savedMatches++
                                         caupanharmMatches.add(match)
-                                    }catch (e: Exception){
+                                    } catch (e: Exception) {
                                         logger.error(e.stackTraceToString())
                                     }
                                 }
                         }
-                        .collectList() // Collecte tous les résultats dans une liste
-                        .flatMap { // Utiliser flatMap pour revenir à un Mono<CaupanharmResponse>
-                            Mono.just(CaupanharmResponse(200, "Added $matchesAdded matches to the database. ${missingMatchesIds.size - matchesAdded} matches are still missing due to rate limits. If matches are missing, try again in a minute.", CaupanharmResponseType.MATCH_HISTORY, caupanharmMatches))
+                        .collectList()
+                        .flatMap { // flatMap pour revenir à un Mono<CaupanharmResponse>
+                            Mono.just(
+                                CaupanharmResponse(
+                                    200,
+                                    "Added $matchesAdded matches to the database. ${totalMatches - savedMatches} matches are still missing due to rate limits. If matches are missing, try again in a minute.",
+                                    CaupanharmResponseType.MATCH_HISTORY,
+                                    CaupanharmMatchHistoryFull(totalMatches - savedMatches, caupanharmMatches)
+                                )
+                            )
                         }
                 } else {
                     // Si pas de MATCH_HISTORY, retourner la liste de départ dans un Mono
-                    return@flatMap Mono.just(CaupanharmResponse(500, "API Rate exceeded. Please try again in a minute.", CaupanharmResponseType.MATCH_HISTORY, caupanharmMatches))
+                    return@flatMap Mono.just(
+                        CaupanharmResponse(
+                            500,
+                            "API Rate exceeded. Please try again in a minute.",
+                            CaupanharmResponseType.MATCH_HISTORY,
+                            caupanharmMatches
+                        )
+                    )
                 }
             }
     }
