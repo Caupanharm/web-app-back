@@ -6,5 +6,6 @@ enum class CaupanharmResponseType {
     MATCH_LIGHT,
     MATCH_FULL,
     MATCH_ANALYSIS,
+    RAW_MATCH_HISTORY,
     EXCEPTION
 }
