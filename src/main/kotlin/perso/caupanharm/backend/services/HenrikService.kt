@@ -125,6 +125,7 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("region", "eu"),
             Pair("queries", "?startIndex=$startIndex&endIndex=$endIndex&queue=$queue")
         )
+        logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
 
         try {
             return henrikClient.post()

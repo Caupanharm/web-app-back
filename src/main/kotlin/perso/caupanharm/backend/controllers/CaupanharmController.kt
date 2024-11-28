@@ -59,8 +59,8 @@ class CaupanharmController(
         return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
     }
 
-    @GetMapping("/rawHistory")
-    fun getRawHistory(@RequestParam username: String): Mono<CaupanharmResponse> {
+    @GetMapping("/matches")
+    fun getRawHistory(@RequestParam username: String, start: Int? = 0, end: Int? = 20): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawHistory with params: username=$username")
         val splittedName = username.split('#')
 
@@ -68,29 +68,71 @@ class CaupanharmController(
             .flatMap { playerResponse ->
                 if (playerResponse.statusCode == 200) {
                     val puuid = (playerResponse.body as CaupanharmPlayer).puuid
-                    henrikService.getRawHistory(puuid)
-                        .map { rawHistoryResponse ->
-                            if (rawHistoryResponse.statusCode == 200) {
-                                CaupanharmResponse(
-                                    200,
-                                    null,
-                                    CaupanharmResponseType.RAW_MATCH_HISTORY,
-                                    rawHistoryResponse.body as RawMatchHistory
-                                )
+                    henrikService.getRawHistory(puuid, start, end)
+                        .flatMap { rawHistoryResponse ->
+                            val caupanharmMatches: MutableList<CaupanharmMatchFull> = repository.findByPlayerName(username)
+                                .map { it.toCaupanharmMatchFull() }
+                                .toMutableList()
+
+                            if (rawHistoryResponse.bodyType == CaupanharmResponseType.RAW_MATCH_HISTORY) {
+                                val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.id }
+                                val allMatchesIds = (rawHistoryResponse.body as RawMatchHistory).history.map { it.id }
+                                val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
+                                var savedMatches = caupanharmMatchesIds.size
+                                var matchesAdded = 0
+                                logger.info("Matches found: ${rawHistoryResponse.body.total}")
+                                logger.info("Matches initially stored: ${caupanharmMatchesIds.size}")
+
+                                // Flux pour récupérer tous les matchs manquants
+                                return@flatMap Flux.fromIterable(missingMatchesIds)
+                                    .index()
+                                    .flatMap { tuple ->
+                                        val index = tuple.t1
+                                        val matchId = tuple.t2
+                                        henrikService.getMatchFromIdV4(matchId, missingMatchesIds.size, index.toInt() + 1)
+                                            .filter { it.bodyType == CaupanharmResponseType.MATCH_FULL }
+                                            .map { it.body as CaupanharmMatchFull }
+                                            .doOnNext { match ->
+                                                try {
+                                                    repository.save(match.toPostgresMatch())
+                                                    matchesAdded++
+                                                    savedMatches++
+                                                    caupanharmMatches.add(match)
+                                                } catch (e: Exception) {
+                                                    logger.error(e.stackTraceToString())
+                                                }
+                                            }
+                                    }
+                                    .collectList() // collect all the results in a list
+                                    .flatMap { // flatMap pour revenir à un Mono<CaupanharmResponse>
+                                        Mono.just(
+                                            CaupanharmResponse(
+                                                200,
+                                                "Added $matchesAdded matches to the database. ${rawHistoryResponse.body.total - savedMatches} matches are still missing due to rate limits. If matches are missing, try again in a minute.",
+                                                CaupanharmResponseType.MATCH_HISTORY,
+                                                CaupanharmMatchHistoryFull(rawHistoryResponse.body.total - savedMatches, caupanharmMatches)
+                                            )
+                                        )
+                                    }
+
                             } else {
-                                CaupanharmResponse(
-                                    500,
-                                    null,
-                                    CaupanharmResponseType.EXCEPTION,
-                                    rawHistoryResponse.body
+                                // Si pas de RAW_MATCH_HISTORY, retourner la liste de départ dans un Mono
+                                return@flatMap Mono.just(
+                                    CaupanharmResponse(
+                                        500,
+                                        "API Rate exceeded. Please try again in a minute.",
+                                        CaupanharmResponseType.EXCEPTION,
+                                        caupanharmMatches
+                                    )
                                 )
                             }
                         }
                 } else {
-                    Mono.just(
+                    // Si la réponse de playerResponse n'est pas valide, on renvoie une erreur
+                    return@flatMap Mono.just(
                         CaupanharmResponse(
                             500,
-                            null,
+                            "Player not found or error occurred",
                             CaupanharmResponseType.EXCEPTION,
                             playerResponse.body
                         )
@@ -98,74 +140,6 @@ class CaupanharmController(
                 }
             }
     }
-
-
-    @GetMapping("matches")
-    fun getStoredMatches(@RequestParam username: String): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: matches with params: username=${username}")
-        val splittedName = username.split('#')
-
-        return henrikService.getStoredMatches(splittedName[0], splittedName[1])
-            .flatMap { response ->
-                val caupanharmMatches: MutableList<CaupanharmMatchFull> = repository.findByPlayerName(username)
-                    .map { it.toCaupanharmMatchFull() }
-                    .toMutableList()
-                logger.info(response.toString())
-                if (response.bodyType == CaupanharmResponseType.MATCH_HISTORY) {
-                    val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.id }
-                    val allMatchesIds = (response.body as CaupanharmMatchHistoryLight).data.map { it.metadata.id }
-                    val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
-                    var totalMatches = allMatchesIds.size
-                    var savedMatches = caupanharmMatchesIds.size
-                    var matchesAdded = 0
-                    logger.info("Matches found: $totalMatches")
-                    logger.info("Matches initially stored: ${caupanharmMatchesIds.size}")
-
-                    // Flux pour récupérer tous les matchs manquants
-                    return@flatMap Flux.fromIterable(missingMatchesIds)
-                        .index()
-                        .flatMap { tuple ->
-                            val index = tuple.t1
-                            val matchId = tuple.t2
-                            henrikService.getMatchFromIdV4(matchId, missingMatchesIds.size, index.toInt() + 1)
-                                .filter { it.bodyType == CaupanharmResponseType.MATCH_FULL }
-                                .map { it.body as CaupanharmMatchFull }
-                                .doOnNext { match ->
-                                    try {
-                                        repository.save(match.toPostgresMatch())
-                                        matchesAdded++
-                                        savedMatches++
-                                        caupanharmMatches.add(match)
-                                    } catch (e: Exception) {
-                                        logger.error(e.stackTraceToString())
-                                    }
-                                }
-                        }
-                        .collectList()
-                        .flatMap { // flatMap pour revenir à un Mono<CaupanharmResponse>
-                            Mono.just(
-                                CaupanharmResponse(
-                                    200,
-                                    "Added $matchesAdded matches to the database. ${totalMatches - savedMatches} matches are still missing due to rate limits. If matches are missing, try again in a minute.",
-                                    CaupanharmResponseType.MATCH_HISTORY,
-                                    CaupanharmMatchHistoryFull(totalMatches - savedMatches, caupanharmMatches)
-                                )
-                            )
-                        }
-                } else {
-                    // Si pas de MATCH_HISTORY, retourner la liste de départ dans un Mono
-                    return@flatMap Mono.just(
-                        CaupanharmResponse(
-                            500,
-                            "API Rate exceeded. Please try again in a minute.",
-                            CaupanharmResponseType.MATCH_HISTORY,
-                            caupanharmMatches
-                        )
-                    )
-                }
-            }
-    }
-
 
     @GetMapping("/match")
     fun getMatch(@RequestParam("id") matchId: String): Mono<CaupanharmResponse> {

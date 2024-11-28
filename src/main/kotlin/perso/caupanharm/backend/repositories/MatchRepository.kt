@@ -17,6 +17,7 @@ interface MatchRepository : CrudRepository<PostGresMatch, String> {
             SELECT 1
             FROM jsonb_array_elements(m.players) AS player
             WHERE player->>'name' ILIKE :playerName
+            ORDER BY m.game_start DESC
         )
     """, nativeQuery = true)
     fun findByPlayerName(playerName: String): List<PostGresMatch>
