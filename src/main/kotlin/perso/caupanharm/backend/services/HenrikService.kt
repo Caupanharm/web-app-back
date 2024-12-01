@@ -160,4 +160,18 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
+    fun getRawMatch(uuid: String, region: String = "eu"): Mono<String>{
+        val bodyMap: Map<String, String> = mapOf(
+            Pair("type", "matchdetails"),
+            Pair("value", uuid),
+            Pair("region", region),
+            Pair("queries", "")
+        )
+        logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
+        return henrikClient.post()
+            .uri("https://api.henrikdev.xyz/valorant/v1/raw")
+            .body(BodyInserters.fromValue(bodyMap))
+            .exchangeToMono { it.bodyToMono(String::class.java) }
+    }
+
 }
