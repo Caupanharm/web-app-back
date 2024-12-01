@@ -5,6 +5,7 @@ import jakarta.persistence.*
 import org.hibernate.annotations.Type
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.*
 
+
 @Entity
 @Table(name = "matches")
 data class PostGresMatch(
@@ -75,3 +76,14 @@ data class PostGresMatch(
         )
     }
 }
+
+data class PostgresMatchAgents(
+    val playerTeam: String,
+    val agents: List<PostgresMatchAgent>,
+    val score: CaupanharmMatchScore
+)
+
+data class PostgresMatchAgent(
+    val agent: String,
+    val team: String
+)
