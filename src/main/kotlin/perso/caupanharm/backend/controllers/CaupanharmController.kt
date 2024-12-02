@@ -19,6 +19,7 @@ import perso.caupanharm.backend.models.localdata.PlayersMatchData
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchPlayer
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchScore
+import perso.caupanharm.backend.models.caupanharm.valorant.match.full.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.caupanharm.valorant.raw.RawMatchHistory
 import perso.caupanharm.backend.transformers.FullMatchTransformer
@@ -68,15 +69,15 @@ class CaupanharmController(
     }
 
     @GetMapping("/matches")
-    fun getRawHistory(@RequestParam username: String, start: Int? = 0, end: Int? = 20): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: rawHistory with params: username=$username")
+    fun getRawHistory(@RequestParam username: String, region: String = "eu", queue: String = "competitive", start: Int? = 0, end: Int? = 20): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: rawHistory with params: username=$username, region=$region, queue=$queue")
         val splittedName = username.split('#')
 
         return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
             .flatMap { playerResponse ->
                 if (playerResponse.statusCode == 200) {
                     val puuid = (playerResponse.body as CaupanharmPlayer).puuid
-                    henrikService.getRawHistory(puuid, start, end)
+                    henrikService.getRawHistory(puuid, region, queue, start, end)
                         .flatMap { rawHistoryResponse ->
                             val caupanharmMatches: MutableList<CaupanharmMatchFull> =
                                 repository.findByPlayerName(username)
@@ -158,47 +159,20 @@ class CaupanharmController(
     }
 
     // TODO complete and replace /match with
-    @GetMapping("/rawMatch")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") queue: String): Mono<String>{
-        return henrikService.getRawMatch(matchId, queue)
-    }
-
     @GetMapping("/match")
-    fun getMatch(@RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
+    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") queue: String = "eu"): Mono<CaupanharmResponse>{
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
-        try {
-            val isInDb = false
-            if (isInDb) {
-                val dbData = null
-                return Mono.just(
-                    CaupanharmResponse(
-                        200,
-                        null,
-                        CaupanharmResponseType.EXCEPTION,
-                        dbData
-                    )
-                ) // TODO récupérer données db
-            } else {
-                return henrikService.getMatchFromIdV4(matchId).map { response ->
-                    if (response.statusCode == 200) {
-                        repository.save((response.body as CaupanharmMatchFull).toPostgresMatch())
-                        response
-                    } else {
-                        response
-                    }
+
+        return henrikService.getRawMatch(matchId, queue)
+            .map{ response ->
+                if(response.statusCode == 200){
+                    CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, (response.body as RiotMatchFull).toCaupanharmMatchFull())
+                }else{
+                    response
                 }
             }
-        } catch (e: Exception) {
-            return Mono.just(
-                CaupanharmResponse(
-                    500,
-                    null,
-                    CaupanharmResponseType.EXCEPTION,
-                    e.toString()
-                )
-            )
-        }
     }
+
 
     @GetMapping("analysis")
     fun getAnalysedMatch(
@@ -362,5 +336,7 @@ class CaupanharmController(
             return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
         }
     }
+
+
 
 }

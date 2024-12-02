@@ -31,8 +31,7 @@ data class HenrikMatchFull(
             data.metadata.match_id,
             data.metadata.map.name,
             data.metadata.game_length_in_ms,
-            data.metadata.started_at,
-            data.metadata.is_completed,
+            data.metadata.started_at.toLong(),
             data.metadata.queue.name,
             data.metadata.season.short
         )
@@ -47,18 +46,14 @@ data class HenrikMatchFull(
                     player.name + "#" + player.tag,
                     player.team_id,
                     player.party_id,
-                    player.tier.name,
+                    player.tier.id,
                     player.agent.name,
                     CaupanharmPlayerStats(
                         player.stats.score,
                         player.stats.kills,
                         player.stats.deaths ?: 0,
                         player.stats.assists ?: 0,
-                        player.stats.headshots ?: 0,
-                        player.stats.bodyshots ?: 0,
-                        player.stats.legshots ?: 0,
-                        player.stats.damage?.made ?: 0,
-                        player.stats.damage?.received ?: 0
+                        player.session_playtime_in_ms
                     ),
                     CaupanharmAbilities(
                         player.ability_casts.ability1,
@@ -69,13 +64,8 @@ data class HenrikMatchFull(
                     BehaviorSummary(
                         player.behavior.afk_rounds,
                         player.behavior.friendly_fire.outgoing,
-                        player.behavior.friendly_fire.incoming,
                         player.behavior.rounds_in_spawn
-                    ),
-                    TotalEconomy(
-                        player.economy.spent.overall,
-                        player.economy.loadout_value.overall
-                    ),
+                    )
                 )
             )
         }
@@ -110,7 +100,7 @@ data class HenrikMatchFull(
 
     private fun toRoundPlantEvent(event: HenrikPlantEvents): BombEvent {
         return BombEvent(
-            event.round_time_in_ms,
+            event.round_time_in_ms.toLong(),
             event.site,
             event.location?.let { location -> Location(location.x, location.y) },
             event.player.name + "#" + event.player.tag,
@@ -120,7 +110,7 @@ data class HenrikMatchFull(
 
     private fun toRoundDefuseEvent(event: HenrikDefuseEvents): BombEvent {
         return BombEvent(
-            event.round_time_in_ms,
+            event.round_time_in_ms.toLong(),
             null,
             event.location?.let { location -> Location(location.x, location.y) },
             event.player.name + "#" + event.player.tag,
@@ -143,11 +133,11 @@ data class HenrikMatchFull(
         }
     }
 
-    private fun toRoundPlayerStats(stats: List<HenrikPlayerStats>): List<RoundPlayerStats>{
-        val playerStats = mutableListOf<RoundPlayerStats>()
+    private fun toRoundPlayerStats(stats: List<HenrikPlayerStats>): List<CaupanharmRoundPlayerStats>{
+        val playerStats = mutableListOf<CaupanharmRoundPlayerStats>()
         stats.forEach { player ->
             playerStats.add(
-                RoundPlayerStats(
+                CaupanharmRoundPlayerStats(
                     player.player.name + "#" + player.player.tag,
                     CaupanharmAbilities(
                         player.ability_casts.ability_1,
@@ -156,15 +146,11 @@ data class HenrikMatchFull(
                         player.ability_casts.ultimate
                     ),
                     toDamageEvents(player.damage_events),
-                    RoundPlayerStatsRecap(
-                        player.stats.score,
-                        player.stats.kills,
-                        player.stats.headshots ?: 0,
-                        player.stats.bodyshots ?: 0,
-                        player.stats.legshots ?: 0,
-                    ),
+                    player.stats.score,
+                    player.stats.kills,
                     RoundEconomy(
                         player.economy.loadout_value,
+                        -1,
                         player.economy.remaining,
                         player.economy.weapon?.name,
                         player.economy.armor?.name
@@ -198,14 +184,13 @@ data class HenrikMatchFull(
             caupanharmKills.add(
                 CaupanharmMatchKill(
                     kill.round,
-                    kill.time_in_round_in_ms,
-                    kill.time_in_match_in_ms,
+                    kill.time_in_round_in_ms.toLong(),
+                    kill.time_in_match_in_ms.toLong(),
                     kill.killer.name + "#" + kill.killer.tag,
                     kill.victim.name + "#" + kill.victim.tag,
                     kill.assistants.map { assistant -> assistant.name + "#" + assistant.tag },
                     kill.location?.let { location -> Location(location.x, location.y) },
-                    kill.weapon.let { weapon -> weapon.name ?: weapon.type },
-                    kill.secondary_fire_mode,
+                    CaupanharmFinishingDamage(kill.weapon.type, kill.weapon.name, kill.secondary_fire_mode),
                     toPlayersLocation(kill.player_locations)
                 )
             )

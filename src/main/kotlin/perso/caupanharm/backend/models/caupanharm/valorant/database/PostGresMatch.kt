@@ -20,7 +20,7 @@ data class PostGresMatch(
     val gameLengthMillis: Int = 0,
 
     @Column(name = "game_start", nullable = false)
-    val gameStart: String = "",
+    val gameStart: Long = 0,
 
     @Column(name = "queue")
     val queue: String? = null,
@@ -49,7 +49,7 @@ data class PostGresMatch(
         matchId = "",
         map = "",
         gameLengthMillis = 0,
-        gameStart = "",
+        gameStart = 0,
         queue = null,
         season = "",
         players = emptyList(),
@@ -65,7 +65,6 @@ data class PostGresMatch(
                 map,
                 gameLengthMillis,
                 gameStart,
-                true,
                 queue,
                 season
             ),

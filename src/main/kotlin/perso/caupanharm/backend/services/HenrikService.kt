@@ -11,6 +11,7 @@ import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.henrik.HenrikErrors
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.HenrikMatchFull
+import perso.caupanharm.backend.models.caupanharm.valorant.match.full.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.HenrikMatches
 import perso.caupanharm.backend.models.caupanharm.valorant.raw.RawMatchHistory
 import reactor.core.publisher.Mono
@@ -118,11 +119,11 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
-    fun getRawHistory(uuid: String, startIndex: Int? = 0, endIndex: Int? = 20, queue: String? = "competitive"): Mono<CaupanharmResponse> {
+    fun getRawHistory(uuid: String, region: String, queue: String, startIndex: Int? = 0, endIndex: Int? = 20): Mono<CaupanharmResponse> {
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchhistory"),
             Pair("value", uuid),
-            Pair("region", "eu"),
+            Pair("region", region),
             Pair("queries", "?startIndex=$startIndex&endIndex=$endIndex&queue=$queue")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
@@ -160,7 +161,7 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
-    fun getRawMatch(uuid: String, region: String = "eu"): Mono<String>{
+    fun getRawMatch(uuid: String, region: String = "eu"): Mono<CaupanharmResponse>{
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchdetails"),
             Pair("value", uuid),
@@ -168,10 +169,36 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("queries", "")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
-        return henrikClient.post()
-            .uri("https://api.henrikdev.xyz/valorant/v1/raw")
-            .body(BodyInserters.fromValue(bodyMap))
-            .exchangeToMono { it.bodyToMono(String::class.java) }
+        return try{
+            henrikClient.post()
+                .uri("https://api.henrikdev.xyz/valorant/v1/raw")
+                .body(BodyInserters.fromValue(bodyMap))
+                .exchangeToMono { response ->
+                    when (response.statusCode().value()) {
+                        in 200..299 -> response.bodyToMono(RiotMatchFull::class.java)
+                            .map { match ->
+                                CaupanharmResponse(
+                                    200,
+                                    null,
+                                    CaupanharmResponseType.RAW_MATCH,
+                                    match
+                                )
+                            }
+
+                        else -> response.bodyToMono(HenrikErrors::class.java)
+                            .map { henrikErrors ->
+                                CaupanharmResponse(
+                                    502,
+                                    null,
+                                    CaupanharmResponseType.EXCEPTION,
+                                    henrikErrors
+                                )
+                            }
+                    }
+                }
+        }catch(e: Exception){
+            Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
+        }
     }
 
 }

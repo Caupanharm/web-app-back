@@ -35,4 +35,7 @@ interface MatchRepository : CrudRepository<PostGresMatch, String> {
 """, nativeQuery = true)
     fun findTeamsByPlayerName(playerName: String): List<Map<String, Any>>
 
+    @Query("""SELECT m.match_id FROM matches m""", nativeQuery = true)
+    fun findMatchIds(): Set<String>
+
 }
