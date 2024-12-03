@@ -135,7 +135,7 @@ data class CaupanharmMatchKill(
     val round: Int,
     val roundTimeMillis: Long,
     val matchTimeMillis: Long,
-    val killer: String,
+    val killer: String?,
     val victim: String,
     val assistants: List<String>?,
     val location: Location?,

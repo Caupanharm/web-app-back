@@ -378,7 +378,7 @@ data class RiotMatchKill(
     val gameTime: Long,
     val roundTime: Long,
     val round: Int,
-    val killer: String,
+    val killer: String?,
     val victim: String,
     val victimLocation: RiotLocation,
     val assistants: List<String>,
