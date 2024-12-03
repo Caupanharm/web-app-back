@@ -16,9 +16,9 @@ import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatc
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchFull
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchPlayer
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchScore
+import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchFull
+import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchPlayer
+import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchScore
 import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.riot.RawMatch
@@ -27,6 +27,8 @@ import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
+import java.util.*
+import kotlin.collections.HashSet
 import kotlin.math.abs
 
 val objectMapper = jacksonObjectMapper()
@@ -74,7 +76,7 @@ class CaupanharmController(
             .flatMap { playerResponse ->
                 if (playerResponse.statusCode == 200) {
                     val puuid = (playerResponse.body as CaupanharmPlayer).puuid
-                    henrikService.getRawHistory(puuid, region, queue, start, end)
+                    henrikService.getHistory(puuid, region, queue, start, end)
                         .flatMap { rawHistoryResponse ->
                             val caupanharmMatches: MutableList<CaupanharmMatchFull> =
                                 repository.findByPlayerName(username)
@@ -83,7 +85,7 @@ class CaupanharmController(
 
                             if (rawHistoryResponse.bodyType == CaupanharmResponseType.RAW_MATCH_HISTORY) {
                                 val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.matchId }
-                                val allMatchesIds = (rawHistoryResponse.body as RawMatchHistory).history.map { it.id }
+                                val allMatchesIds = (rawHistoryResponse.body as RawMatchHistory).history.map { it.matchId }
                                 val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
                                 var savedMatches = caupanharmMatchesIds.size
                                 var matchesAdded = 0
@@ -93,7 +95,7 @@ class CaupanharmController(
                                 // Flux pour récupérer tous les matchs manquants
                                 return@flatMap Flux.fromIterable(missingMatchesIds)
                                     .flatMap { matchId ->
-                                        henrikService.getRawMatch(matchId, region)
+                                        henrikService.getMatch(matchId, region)
                                             .filter { it.bodyType == CaupanharmResponseType.RAW_MATCH }
                                             .map { it.body as RiotMatchFull }
                                             .doOnNext { match ->
@@ -149,15 +151,21 @@ class CaupanharmController(
             }
     }
 
+    @GetMapping("/rawMatch")
+    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<String>{
+        logger.info("Endpoint fetched: rawMatch with params: matchId=${matchId}")
+        return henrikService.getRawMatch(matchId, region)
+    }
+
     @GetMapping("/match")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
+    fun getMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
 
-        return henrikService.getRawMatch(matchId, region)
+        return henrikService.getMatch(matchId, region)
             .map{ response ->
                 if(response.statusCode == 200){
                     val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
-                    if(repository.findByMatchId(matchId) == null) repository.save(match.toPostgresMatch())
+                    if(repository.countByMatchId(matchId) == 0) repository.save(match.toPostgresMatch())
                     CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, match)
                 }else{
                     response
@@ -172,14 +180,13 @@ class CaupanharmController(
         @RequestParam("id") matchId: String
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
-        val match = henrikService.getMatchFromIdV4(matchId)
-        return match.flatMap { response ->
-            if (response.statusCode == 200) {
-                fullMatchTransformer.analyseFullMatch(player, response.body as CaupanharmMatchFull)
+        val match = repository.findByMatchId(matchId)
+        return if(match != null) {
+                fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
             } else {
-                Mono.just(response)
+                Mono.just(CaupanharmResponse(500, "Match not found",CaupanharmResponseType.EXCEPTION, matchId))
             }
-        }
+
     }
 
     @GetMapping("teams")
@@ -329,5 +336,116 @@ class CaupanharmController(
         }
     }
 
+    // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm
+    @GetMapping("populateDatabase")
+    fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse{
+        val playerResponse = henrikService.getPlayerFromName(seed).block()!!
+        Thread.sleep(3000)
+        if (playerResponse.statusCode != 200) return playerResponse
+        val player = playerResponse.body as CaupanharmPlayer
+        var visitedPlayers: MutableSet<String> = HashSet()
+        var playersToVisit: Queue<String> = LinkedList()
+        playersToVisit.add(player.puuid)
 
+        logger.info("Starting populating database with seed $seed")
+        return populateDatabaseRecursive(player.puuid, player.region, "competitive", visitedPlayers, playersToVisit)
+    }
+
+    // 2s delay after each Henrik request to avoid reaching rate limit
+    fun populateDatabaseRecursive(playerId: String, region: String, queue: String, visitedPlayers: MutableSet<String>, playersToVisit: Queue<String>): CaupanharmResponse{
+        try{
+            while(playersToVisit.size > 0){
+                val currentPlayer = playersToVisit.remove()
+                logger.info("Checking player $currentPlayer, region $region, queue $queue")
+                logger.info("${visitedPlayers.size} players already visited")
+                logger.info("${playersToVisit.size} more players to visit")
+                // For every player that hasn't been checked already
+                if(!visitedPlayers.contains(currentPlayer)){
+                    // Find every match
+                    var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
+                    Thread.sleep(3000)
+                    while(firstHistoryResponse.statusCode != 200) {
+                        logger.info("Got ${firstHistoryResponse.statusCode}   ${firstHistoryResponse.body}")
+                        logger.info("Trying again")
+                        firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
+                        Thread.sleep(3000)
+                    }
+                    val firstResponse = firstHistoryResponse.body as RawMatchHistory
+                    var foundMatches: MutableList<RawMatch> = firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronogically ordered
+                    // Stops the loop when there is no more matches (each request retrieves up to 20 matches so if there is only 0 to 19 matches we know we reached the end)
+                    // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
+                    while(firstResponse.total - foundMatches.size != 0 && foundMatches[foundMatches.size-1].startTime / 1000 > (Instant.now().epochSecond - 5259486)){
+                        var nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
+                        Thread.sleep(3000)
+                        while(nextResponse.statusCode != 200){
+                            logger.info("Got ${nextResponse.statusCode}   ${nextResponse.body}")
+                            logger.info("Trying again")
+                            nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
+                            Thread.sleep(3000)
+                        }
+                        val responseBody = nextResponse.body as RawMatchHistory
+                        responseBody.history.forEach { if((it.startTime / 1000) > Instant.now().epochSecond - 5259486) foundMatches.add(it) }
+
+                    }
+                    logger.info("Found ${foundMatches.size} corresponding match IDs")
+
+                    // Save every match
+                    foundMatches.forEach{ match ->
+                        if(repository.countByMatchId(match.matchId) == 0){
+                            var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
+                            Thread.sleep(3000)
+                            while(fullMatchResponse.statusCode != 200){
+                                logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
+                                logger.info("Trying again")
+                                fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
+                                Thread.sleep(3000)
+                            }
+
+                            if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
+                                val fullMatch = fullMatchResponse.body as RiotMatchFull
+                                fullMatch.players.forEach { player ->
+                                    if(!playersToVisit.contains(player.subject)){
+                                        playersToVisit.add(player.subject)
+                                    }
+                                }
+                                repository.save(fullMatch.toCaupanharmMatchFull().toPostgresMatch())
+                                logger.info("Saved match ${match.matchId} from player $currentPlayer")
+                            }else{
+                                logger.info("Couldn't save match ${match.matchId} from player $currentPlayer")
+                                logger.info("${fullMatchResponse.statusCode}   ${fullMatchResponse.message}")
+                                logger.info(fullMatchResponse.body.toString())
+                            }
+                        }else{
+                            logger.info("Match ${match.matchId} from player $currentPlayer already saved")
+                            if(match == foundMatches[0]){
+                                var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
+                                Thread.sleep(3000)
+                                while(fullMatchResponse.statusCode != 200){
+                                    logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
+                                    logger.info("Trying again")
+                                    fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
+                                    Thread.sleep(3000)
+                                }
+                                if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
+                                    val fullMatch = fullMatchResponse.body as RiotMatchFull
+                                    fullMatch.players.forEach { player ->
+                                        if(!playersToVisit.contains(player.subject)){
+                                            playersToVisit.add(player.subject)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    visitedPlayers.add(currentPlayer)
+                    // Call recursively with a new playerId
+                    populateDatabaseRecursive(playersToVisit.peek(), region, queue, visitedPlayers, playersToVisit)
+                }
+            }
+            return CaupanharmResponse(200, "Done.", CaupanharmResponseType.EXCEPTION, "Should never happen, unless...")
+        }catch(e: Exception){
+            return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.stackTraceToString())
+        }
+    }
 }
