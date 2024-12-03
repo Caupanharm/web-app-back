@@ -22,11 +22,14 @@ class HenrikService(private val henrikClient: WebClient) {
     @Value("\${valorant.season.current}")
     lateinit var currentValSeason: String
 
-    fun getPlayerFromName(username: String, tag: String): Mono<CaupanharmResponse> {
-        logger.info("GET  /valorant/v2/account/$username/$tag?force=true")
+    fun getPlayerFromName(username: String): Mono<CaupanharmResponse> {
+        val splittedName = username.split('#')
+        if(splittedName.size != 2) return Mono.just(CaupanharmResponse(500, "Player not found",CaupanharmResponseType.EXCEPTION, "Requested player: $username"))
+
+        logger.info("GET  /valorant/v2/account/${splittedName[0]}/${splittedName[1]}?force=true")
         return try {
             henrikClient.get()
-                .uri("/valorant/v2/account/$username/$tag?force=true")
+                .uri("/valorant/v2/account/${splittedName[0]}/${splittedName[1]}?force=true")
                 .exchangeToMono { response ->
                     when (response.statusCode().value()) {
                         in 200..299 -> response.bodyToMono(HenrikAccount::class.java)
@@ -160,7 +163,7 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
-    fun getRawMatch(uuid: String, region: String = "eu"): Mono<CaupanharmResponse>{
+    fun getRawMatch(uuid: String, region: String): Mono<CaupanharmResponse>{
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchdetails"),
             Pair("value", uuid),

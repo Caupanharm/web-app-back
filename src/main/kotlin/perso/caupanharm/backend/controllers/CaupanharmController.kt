@@ -21,10 +21,12 @@ import perso.caupanharm.backend.models.caupanharm.valorant.match.full.Caupanharm
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchScore
 import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
+import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Instant
 import kotlin.math.abs
 
 val objectMapper = jacksonObjectMapper()
@@ -62,16 +64,13 @@ class CaupanharmController(
     @GetMapping("/player")
     fun getPlayer(@RequestParam username: String): Any {
         logger.info("Endpoint fetched: player with params: username=${username}")
-        val splittedName = username.split('#')
-        return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
+        return henrikService.getPlayerFromName(username)
     }
 
     @GetMapping("/matches")
     fun getRawHistory(@RequestParam username: String, region: String = "eu", queue: String = "competitive", start: Int? = 0, end: Int? = 20): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawHistory with params: username=$username, region=$region, queue=$queue")
-        val splittedName = username.split('#')
-
-        return henrikService.getPlayerFromName(splittedName[0], splittedName[1])
+        return henrikService.getPlayerFromName(username)
             .flatMap { playerResponse ->
                 if (playerResponse.statusCode == 200) {
                     val puuid = (playerResponse.body as CaupanharmPlayer).puuid
@@ -93,23 +92,17 @@ class CaupanharmController(
 
                                 // Flux pour récupérer tous les matchs manquants
                                 return@flatMap Flux.fromIterable(missingMatchesIds)
-                                    .index()
-                                    .flatMap { tuple ->
-                                        val index = tuple.t1
-                                        val matchId = tuple.t2
-                                        henrikService.getMatchFromIdV4(
-                                            matchId,
-                                            missingMatchesIds.size,
-                                            index.toInt() + 1
-                                        )
-                                            .filter { it.bodyType == CaupanharmResponseType.MATCH_FULL }
-                                            .map { it.body as CaupanharmMatchFull }
+                                    .flatMap { matchId ->
+                                        henrikService.getRawMatch(matchId, region)
+                                            .filter { it.bodyType == CaupanharmResponseType.RAW_MATCH }
+                                            .map { it.body as RiotMatchFull }
                                             .doOnNext { match ->
                                                 try {
-                                                    repository.save(match.toPostgresMatch())
+                                                    val caupanharmMatchFull = match.toCaupanharmMatchFull()
+                                                    repository.save(caupanharmMatchFull.toPostgresMatch())
                                                     matchesAdded++
                                                     savedMatches++
-                                                    caupanharmMatches.add(match)
+                                                    caupanharmMatches.add(caupanharmMatchFull)
                                                 } catch (e: Exception) {
                                                     logger.error(e.stackTraceToString())
                                                 }
@@ -157,13 +150,15 @@ class CaupanharmController(
     }
 
     @GetMapping("/match")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") queue: String = "eu"): Mono<CaupanharmResponse>{
+    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
 
-        return henrikService.getRawMatch(matchId, queue)
+        return henrikService.getRawMatch(matchId, region)
             .map{ response ->
                 if(response.statusCode == 200){
-                    CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, (response.body as RiotMatchFull).toCaupanharmMatchFull())
+                    val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
+                    if(repository.findByMatchId(matchId) == null) repository.save(match.toPostgresMatch())
+                    CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, match)
                 }else{
                     response
                 }
@@ -334,15 +329,5 @@ class CaupanharmController(
         }
     }
 
-    @GetMapping("populateDatabase")
-    fun populateDatabase(@RequestParam("seed") seed: String): Any{
-        logger.info("Populating database with seed $seed. Fasten your belt and praise the Lord o7")
-        var visitedMatches = repository.findMatchIds()
-        val initialVisitedMatchesSize = visitedMatches.size
-        var visitedPlayers = mutableSetOf<String>()
-
-
-        return ""
-    }
 
 }
