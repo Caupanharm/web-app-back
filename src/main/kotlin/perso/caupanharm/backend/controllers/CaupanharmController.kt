@@ -340,7 +340,7 @@ class CaupanharmController(
     @GetMapping("populateDatabase")
     fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse{
         val playerResponse = henrikService.getPlayerFromName(seed).block()!!
-        Thread.sleep(3000)
+        Thread.sleep(2200)
         if (playerResponse.statusCode != 200) return playerResponse
         val player = playerResponse.body as CaupanharmPlayer
         var visitedPlayers: MutableSet<String> = HashSet()
@@ -363,12 +363,12 @@ class CaupanharmController(
                 if(!visitedPlayers.contains(currentPlayer)){
                     // Find every match
                     var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
-                    Thread.sleep(3000)
+                    Thread.sleep(2200)
                     while(firstHistoryResponse.statusCode != 200) {
                         logger.info("Got ${firstHistoryResponse.statusCode}   ${firstHistoryResponse.body}")
                         logger.info("Trying again")
                         firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
-                        Thread.sleep(3000)
+                        Thread.sleep(2200)
                     }
                     val firstResponse = firstHistoryResponse.body as RawMatchHistory
                     var foundMatches: MutableList<RawMatch> = firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronogically ordered
@@ -376,12 +376,12 @@ class CaupanharmController(
                     // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
                     while(firstResponse.total - foundMatches.size != 0 && foundMatches[foundMatches.size-1].startTime / 1000 > (Instant.now().epochSecond - 5259486)){
                         var nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
-                        Thread.sleep(3000)
+                        Thread.sleep(2200)
                         while(nextResponse.statusCode != 200){
                             logger.info("Got ${nextResponse.statusCode}   ${nextResponse.body}")
                             logger.info("Trying again")
                             nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
-                            Thread.sleep(3000)
+                            Thread.sleep(2200)
                         }
                         val responseBody = nextResponse.body as RawMatchHistory
                         responseBody.history.forEach { if((it.startTime / 1000) > Instant.now().epochSecond - 5259486) foundMatches.add(it) }
@@ -393,12 +393,12 @@ class CaupanharmController(
                     foundMatches.forEach{ match ->
                         if(repository.countByMatchId(match.matchId) == 0){
                             var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                            Thread.sleep(3000)
+                            Thread.sleep(2200)
                             while(fullMatchResponse.statusCode != 200){
                                 logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
                                 logger.info("Trying again")
                                 fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                Thread.sleep(3000)
+                                Thread.sleep(2200)
                             }
 
                             if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
@@ -419,20 +419,24 @@ class CaupanharmController(
                             logger.info("Match ${match.matchId} from player $currentPlayer already saved")
                             if(match == foundMatches[0]){
                                 var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                Thread.sleep(3000)
-                                while(fullMatchResponse.statusCode != 200){
-                                    logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
-                                    logger.info("Trying again")
-                                    fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                    Thread.sleep(3000)
-                                }
-                                if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
-                                    val fullMatch = fullMatchResponse.body as RiotMatchFull
-                                    fullMatch.players.forEach { player ->
-                                        if(!playersToVisit.contains(player.subject)){
-                                            playersToVisit.add(player.subject)
+                                Thread.sleep(2200)
+                                try{
+                                    while(fullMatchResponse.statusCode != 200){
+                                        logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
+                                        logger.info("Trying again")
+                                        fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
+                                        Thread.sleep(2200)
+                                    }
+                                    if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
+                                        val fullMatch = fullMatchResponse.body as RiotMatchFull
+                                        fullMatch.players.forEach { player ->
+                                            if(!playersToVisit.contains(player.subject)){
+                                                playersToVisit.add(player.subject)
+                                            }
                                         }
                                     }
+                                }catch(e: Exception){
+                                    logger.error(e.stackTraceToString())
                                 }
                             }
                         }
