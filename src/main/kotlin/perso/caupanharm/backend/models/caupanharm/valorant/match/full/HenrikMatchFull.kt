@@ -52,8 +52,7 @@ data class HenrikMatchFull(
                         player.stats.score,
                         player.stats.kills,
                         player.stats.deaths ?: 0,
-                        player.stats.assists ?: 0,
-                        player.session_playtime_in_ms
+                        player.stats.assists ?: 0
                     ),
                     CaupanharmAbilities(
                         player.ability_casts.ability1,

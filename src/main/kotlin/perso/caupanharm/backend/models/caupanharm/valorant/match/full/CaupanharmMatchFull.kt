@@ -11,7 +11,7 @@ data class CaupanharmMatchFull(
 ){
     fun toPostgresMatch(): PostGresMatch {
         return PostGresMatch(
-            metadata.id,
+            metadata.matchId,
             metadata.map,
             metadata.gameLengthMillis,
             metadata.gameStartMillis,
@@ -26,7 +26,7 @@ data class CaupanharmMatchFull(
 }
 
 data class CaupanharmMatchMetadata(
-    val id: String,
+    val matchId: String,
     val map: String,
     val gameLengthMillis: Int,
     val gameStartMillis: Long,
@@ -35,7 +35,7 @@ data class CaupanharmMatchMetadata(
 )
 
 data class CaupanharmMatchPlayer(
-    val id: String,
+    val playerId: String,
     val name: String, // includes tag
     val team: String,
     val party: String,
@@ -50,8 +50,7 @@ data class CaupanharmPlayerStats(
     val score: Int,
     val kills: Int,
     val deaths: Int,
-    val assists: Int,
-    val playtimeMillis: Int
+    val assists: Int
 )
 
 data class CaupanharmAbilities(

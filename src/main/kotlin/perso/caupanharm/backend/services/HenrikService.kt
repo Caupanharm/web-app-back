@@ -5,15 +5,14 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.bodyToMono
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.henrik.HenrikErrors
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.HenrikMatchFull
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.RiotMatchFull
+import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.HenrikMatches
-import perso.caupanharm.backend.models.caupanharm.valorant.raw.RawMatchHistory
+import perso.caupanharm.backend.models.riot.RawMatchHistory
 import reactor.core.publisher.Mono
 
 @Service

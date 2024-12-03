@@ -19,16 +19,16 @@ import perso.caupanharm.backend.models.localdata.PlayersMatchData
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchPlayer
 import perso.caupanharm.backend.models.caupanharm.valorant.match.full.CaupanharmMatchScore
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.RiotMatchFull
+import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
-import perso.caupanharm.backend.models.caupanharm.valorant.raw.RawMatchHistory
+import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import kotlin.math.abs
 
 val objectMapper = jacksonObjectMapper()
-
+private val logger = KotlinLogging.logger {}
 
 @RestController
 @RequestMapping("/api")
@@ -38,8 +38,6 @@ class CaupanharmController(
     private val fullMatchTransformer: FullMatchTransformer
 
 ) {
-    private val logger = KotlinLogging.logger {}
-
     @Autowired
     lateinit var repository: MatchRepository
 
@@ -85,7 +83,7 @@ class CaupanharmController(
                                     .toMutableList()
 
                             if (rawHistoryResponse.bodyType == CaupanharmResponseType.RAW_MATCH_HISTORY) {
-                                val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.id }
+                                val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.matchId }
                                 val allMatchesIds = (rawHistoryResponse.body as RawMatchHistory).history.map { it.id }
                                 val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
                                 var savedMatches = caupanharmMatchesIds.size
@@ -158,7 +156,6 @@ class CaupanharmController(
             }
     }
 
-    // TODO complete and replace /match with
     @GetMapping("/match")
     fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") queue: String = "eu"): Mono<CaupanharmResponse>{
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
@@ -337,6 +334,15 @@ class CaupanharmController(
         }
     }
 
+    @GetMapping("populateDatabase")
+    fun populateDatabase(@RequestParam("seed") seed: String): Any{
+        logger.info("Populating database with seed $seed. Fasten your belt and praise the Lord o7")
+        var visitedMatches = repository.findMatchIds()
+        val initialVisitedMatchesSize = visitedMatches.size
+        var visitedPlayers = mutableSetOf<String>()
 
+
+        return ""
+    }
 
 }

@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.caupanharm.valorant.raw
+package perso.caupanharm.backend.models.riot
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

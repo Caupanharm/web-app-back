@@ -1,4 +1,7 @@
-package perso.caupanharm.backend.models.caupanharm.valorant.match.full
+package perso.caupanharm.backend.models.riot
+
+import perso.caupanharm.backend.models.caupanharm.valorant.match.full.*
+import perso.caupanharm.backend.models.riot.assets.*
 
 data class RiotMatchFull(
     val matchInfo: RiotMatchInfo,
@@ -8,7 +11,7 @@ data class RiotMatchFull(
     val roundResults: List<RiotMatchRoundResult>,
     val kills: List<RiotMatchKill>
 ){
-    fun toCaupanharmMatchFull(): CaupanharmMatchFull{
+    fun toCaupanharmMatchFull(): CaupanharmMatchFull {
         return CaupanharmMatchFull(
             matchInfo.toCaupanharmMatchMetadata(),
             players.map{ it.toCaupanharmMatchPlayer()},
@@ -18,7 +21,7 @@ data class RiotMatchFull(
         )
     }
 
-    fun createCaupanharmScore(): CaupanharmMatchScore{
+    fun createCaupanharmScore(): CaupanharmMatchScore {
         val blue = if(teams[0].teamId == "Blue") teams[0].numPoints else teams[1].numPoints
         val red = if(teams[0].teamId == "Red") teams[0].numPoints else teams[1].numPoints
         return CaupanharmMatchScore(blue, red)
@@ -49,14 +52,14 @@ data class RiotMatchInfo(
     val partyRRPenalties: Map<String, Int>,
     val shouldMatchDisablePenalties: Boolean
 ){
-    fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata{
+    fun toCaupanharmMatchMetadata(): CaupanharmMatchMetadata {
         return CaupanharmMatchMetadata(
-            id = matchId,
-            map = mapId,
+            matchId = matchId,
+            map = Maps.getNameFromUuid(mapId),
             gameLengthMillis = gameLengthMillis,
             gameStartMillis = gameStartMillis,
             queue = queueID,
-            season = seasonId
+            season = Episodes.getTitleFromUuid(seasonId)
         )
     }
 }
@@ -87,14 +90,14 @@ data class RiotMatchPlayer(
     val behaviorFactors: RiotMatchPlayerBehaviorFactor,
     val newPlayerExperienceDetails: RiotMatchPlayerExperience
 ){
-    fun toCaupanharmMatchPlayer(): CaupanharmMatchPlayer{
+    fun toCaupanharmMatchPlayer(): CaupanharmMatchPlayer {
         return CaupanharmMatchPlayer(
-            id = subject,
+            playerId = subject,
             name = gameName + "#" + tagLine,
             team = teamId,
             party = partyId,
             rank = competitiveTier,
-            agent = characterId,
+            agent = Agents.getTitleFromUuid(characterId),
             stats = stats.toCaupanharmPlayerStats(),
             abilityCasts = stats.abilityCasts.toCaupanharmAbilities(),
             behavior = behaviorFactors.toCaupanharmBehavior()
@@ -119,13 +122,12 @@ data class RiotPlayerStats(
     val playtimeMillis: Int,
     val abilityCasts: RiotMatchPlayerAbilityCasts
 ){
-    fun toCaupanharmPlayerStats(): CaupanharmPlayerStats{
+    fun toCaupanharmPlayerStats(): CaupanharmPlayerStats {
         return CaupanharmPlayerStats(
             score = score,
             kills = kills,
             deaths = deaths,
-            assists = assists,
-            playtimeMillis = playtimeMillis
+            assists = assists
         )
     }
 }
@@ -136,7 +138,7 @@ data class RiotMatchPlayerAbilityCasts(
     val ability2Casts: Int?,
     val ultimateCasts: Int?
 ){
-    fun toCaupanharmAbilities(): CaupanharmAbilities{
+    fun toCaupanharmAbilities(): CaupanharmAbilities {
         return CaupanharmAbilities(
             ability1 = ability1Casts,
             ability2 = ability2Casts,
@@ -163,7 +165,7 @@ data class RiotMatchPlayerBehaviorFactor(
     val selfDamage: Int,
     val stayedInSpawnRounds: Int
 ){
-    fun toCaupanharmBehavior(): BehaviorSummary{
+    fun toCaupanharmBehavior(): BehaviorSummary {
         return BehaviorSummary(
             afk = afkRounds,
             dealtFriendlyFire = friendlyFireOutgoing,
@@ -222,11 +224,11 @@ data class RiotMatchRoundResult(
     val playerEconomies: List<RiotRoundPlayerEconomy>,
     val playerScores: List<RiotRoundPlayerScore>
 ){
-    fun toCaupanharmMatchRound(): CaupanharmMatchRound{
+    fun toCaupanharmMatchRound(): CaupanharmMatchRound {
         return CaupanharmMatchRound(
             winningTeam = winningTeam,
             result = roundResult,
-            ceremony = roundCeremony,
+            ceremony = Ceremonies.getCustomNameFromDisplayName(roundCeremony),
             plantEvent = getPlantEvent(),
             defuseEvent = getDefuseEvent(),
             stats = playerStats.map{it.toCaupanharmRoundPlayerStats()}
@@ -261,7 +263,7 @@ data class RiotPlayerLocation(
     val viewRadians: Double,
     val location: RiotLocation
 ){
-    fun toCaupanharmPlayerLocation(): PlayerLocation{
+    fun toCaupanharmPlayerLocation(): PlayerLocation {
         return PlayerLocation(
             player = subject,
             location = location.toCaupanharmLocation(),
@@ -274,7 +276,7 @@ data class RiotLocation(
     val x: Int,
     val y: Int
 ){
-    fun toCaupanharmLocation(): Location{
+    fun toCaupanharmLocation(): Location {
         return Location(
             x = x,
             y = y
@@ -293,7 +295,7 @@ data class RiotRoundPlayerStats(
     val wasPenalized: Boolean,
     val stayedInSpawn: Boolean
 ){
-    fun toCaupanharmRoundPlayerStats(): CaupanharmRoundPlayerStats{
+    fun toCaupanharmRoundPlayerStats(): CaupanharmRoundPlayerStats {
         return CaupanharmRoundPlayerStats(
             player = subject,
             abilityCasts = ability.toCaupanharmAbilities(),
@@ -313,7 +315,7 @@ data class RiotDamageDetails(
     val bodyshots: Int,
     val headshots: Int
 ){
-    fun toCaupanharmDamageEvent(): DamageEvent{
+    fun toCaupanharmDamageEvent(): DamageEvent {
         return DamageEvent(
             player = receiver,
             damage = damage,
@@ -331,13 +333,13 @@ data class RiotEconomy(
     val remaining: Int,
     val spent: Int
 ){
-    fun toCaupanharmEconomy(): RoundEconomy{
+    fun toCaupanharmEconomy(): RoundEconomy {
         return RoundEconomy(
             loadoutValue = loadoutValue,
             spent = spent,
             remaining = remaining,
-            weapon = weapon,
-            armor = armor
+            weapon = weapon?.let{ Weapons.getNameFromUUID(it)},
+            armor = armor?.let { Armors.getNameFromUUID(it) }
         )
     }
 }
@@ -348,7 +350,7 @@ data class RiotRoundAbilityCasts(
     val ability2Effects: Int?,
     val ultimateEffects: Int?
 ){
-    fun toCaupanharmAbilities(): CaupanharmAbilities{
+    fun toCaupanharmAbilities(): CaupanharmAbilities {
         return CaupanharmAbilities(
             ability1 = ability1Effects,
             ability2 = ability2Effects,
@@ -383,7 +385,7 @@ data class RiotMatchKill(
     val playerLocations: List<RiotPlayerLocation>,
     val finishingDamage: RiotFinishingDamage
 ){
-    fun toCaupanharmMatchKill(): CaupanharmMatchKill{
+    fun toCaupanharmMatchKill(): CaupanharmMatchKill {
         return CaupanharmMatchKill(
             round = round,
             roundTimeMillis = roundTime,
@@ -403,7 +405,7 @@ data class RiotFinishingDamage(
     val damageItem: String,
     val isSecondaryFireMode: Boolean
 ){
-    fun toCaupanharmFinishingDamage(): CaupanharmFinishingDamage{
+    fun toCaupanharmFinishingDamage(): CaupanharmFinishingDamage {
         return CaupanharmFinishingDamage(damageType, damageItem, isSecondaryFireMode)
     }
 }
