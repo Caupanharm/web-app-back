@@ -39,4 +39,7 @@ interface MatchRepository : CrudRepository<PostGresMatch, String> {
     @Query("""SELECT COUNT(m) FROM matches m WHERE m.match_id = :uuid""", nativeQuery = true)
     fun countByMatchId(@Param("uuid") uuid: String): Int
 
+    @Query("""SELECT m.* FROM matches m WHERE m.match_id = :uuid""", nativeQuery = true)
+    fun findByMatchId(@Param("uuid") uuid: String): PostGresMatch?
+
 }

@@ -1,4 +1,4 @@
-package perso.caupanharm.backend.models.caupanharm.valorant.match.full
+package perso.caupanharm.backend.models.caupanharm.valorant.match
 
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatch
 
@@ -118,7 +118,7 @@ data class CaupanharmRoundPlayerStats(
     val abilityCasts: CaupanharmAbilities,
     val damageEvents: List<DamageEvent>,
     val score: Int,
-    val kills: Int,
+    val kills: List<CaupanharmMatchKill>,
     val economy: RoundEconomy,
     val behavior: RoundBehavior,
 )

@@ -9,9 +9,7 @@ import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.HenrikAccount
 import perso.caupanharm.backend.models.henrik.HenrikErrors
-import perso.caupanharm.backend.models.caupanharm.valorant.match.full.HenrikMatchFull
 import perso.caupanharm.backend.models.riot.RiotMatchFull
-import perso.caupanharm.backend.models.caupanharm.valorant.matches.HenrikMatches
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import reactor.core.publisher.Mono
 
@@ -24,7 +22,14 @@ class HenrikService(private val henrikClient: WebClient) {
 
     fun getPlayerFromName(username: String): Mono<CaupanharmResponse> {
         val splittedName = username.split('#')
-        if(splittedName.size != 2) return Mono.just(CaupanharmResponse(500, "Player not found",CaupanharmResponseType.EXCEPTION, "Requested player: $username"))
+        if (splittedName.size != 2) return Mono.just(
+            CaupanharmResponse(
+                500,
+                "Player not found",
+                CaupanharmResponseType.EXCEPTION,
+                "Requested player: $username"
+            )
+        )
 
         logger.info("GET  /valorant/v2/account/${splittedName[0]}/${splittedName[1]}?force=true")
         return try {
@@ -52,76 +57,13 @@ class HenrikService(private val henrikClient: WebClient) {
     }
 
 
-    fun getStoredMatches(name: String, tag: String): Mono<CaupanharmResponse> {
-        logger.info("GET  /valorant/v1/stored-matches/eu/$name/$tag?mode=competitive")
-        try {
-            return henrikClient.get()
-                .uri("valorant/v1/stored-matches/eu/$name/$tag?mode=competitive")
-                .exchangeToMono { response ->
-                    when (response.statusCode().value()) {
-                        in 200..299 -> response.bodyToMono(HenrikMatches::class.java)
-                            .map { matches ->
-                                logger.info("Found ${matches.data.size} matches")
-                                // Filtrer la liste data pour ne garder que les éléments de la saison en cours
-                                val filteredData = matches.data.filter { it.meta.season.short == currentValSeason }
-                                logger.info("${filteredData.size} of which are from season $currentValSeason")
-                                matches.copy(data = filteredData).toCaupanharmResponse()
-                            }
-
-                        else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors ->
-                                CaupanharmResponse(
-                                    502,
-                                    null,
-                                    CaupanharmResponseType.EXCEPTION,
-                                    henrikErrors
-                                )
-                            }
-                    }
-                }
-        } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
-        }
-    }
-
-    fun getMatchFromIdV4(matchId: String, total: Int? = null, current: Int? = null): Mono<CaupanharmResponse> {
-        if ((current == null) || (total == null)) {
-            logger.info("GET  /valorant/v4/match/eu/$matchId")
-        } else {
-            logger.info("GET  /valorant/v4/match/eu/$matchId ($current/$total)")
-        }
-        try {
-            return henrikClient.get()
-                .uri("https://api.henrikdev.xyz/valorant/v4/match/eu/$matchId")
-                .exchangeToMono { response ->
-                    when (response.statusCode().value()) {
-                        in 200..299 -> response.bodyToMono(HenrikMatchFull::class.java)
-                            .map { match ->
-                                CaupanharmResponse(
-                                    200,
-                                    null,
-                                    CaupanharmResponseType.MATCH_FULL,
-                                    match.toCaupanharmMatchFull()
-                                )
-                            }
-
-                        else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors ->
-                                CaupanharmResponse(
-                                    502,
-                                    null,
-                                    CaupanharmResponseType.EXCEPTION,
-                                    henrikErrors
-                                )
-                            }
-                    }
-                }
-        } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
-        }
-    }
-
-    fun getRawHistory(uuid: String, region: String, queue: String, startIndex: Int? = 0, endIndex: Int? = 20): Mono<CaupanharmResponse> {
+    fun getHistory(
+        uuid: String,
+        region: String,
+        queue: String,
+        startIndex: Int? = 0,
+        endIndex: Int? = 20
+    ): Mono<CaupanharmResponse> {
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchhistory"),
             Pair("value", uuid),
@@ -163,7 +105,7 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
-    fun getRawMatch(uuid: String, region: String): Mono<CaupanharmResponse>{
+    fun getRawMatch(uuid: String, region: String): Mono<String> {
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchdetails"),
             Pair("value", uuid),
@@ -171,7 +113,24 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("queries", "")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
-        return try{
+        return henrikClient.post()
+            .uri("https://api.henrikdev.xyz/valorant/v1/raw")
+            .body(BodyInserters.fromValue(bodyMap))
+            .exchangeToMono { response ->
+                response.bodyToMono(String::class.java)
+            }
+    }
+
+
+    fun getMatch(uuid: String, region: String): Mono<CaupanharmResponse> {
+        val bodyMap: Map<String, String> = mapOf(
+            Pair("type", "matchdetails"),
+            Pair("value", uuid),
+            Pair("region", region),
+            Pair("queries", "")
+        )
+        logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
+        return try {
             henrikClient.post()
                 .uri("https://api.henrikdev.xyz/valorant/v1/raw")
                 .body(BodyInserters.fromValue(bodyMap))
@@ -198,9 +157,8 @@ class HenrikService(private val henrikClient: WebClient) {
                             }
                     }
                 }
-        }catch(e: Exception){
+        } catch (e: Exception) {
             Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
         }
     }
-
 }

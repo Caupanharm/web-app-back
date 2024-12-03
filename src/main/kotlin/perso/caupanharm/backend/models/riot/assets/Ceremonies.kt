@@ -40,7 +40,7 @@ enum class Ceremonies(val uuid: String,val displayName: String, val  customDispl
 
     companion object {
         fun getCustomNameFromDisplayName(name: String): String {
-            return entries.find { it.displayName == name }?.customDisplayName ?: "Ceremony not found"
+            return entries.find { it.displayName == name }?.customDisplayName ?: ""
         }
     }
 }
