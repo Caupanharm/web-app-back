@@ -2,6 +2,7 @@ package perso.caupanharm.backend.repositories
 
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatch
 
@@ -35,7 +36,7 @@ interface MatchRepository : CrudRepository<PostGresMatch, String> {
 """, nativeQuery = true)
     fun findTeamsByPlayerName(playerName: String): List<Map<String, Any>>
 
-    @Query("""SELECT m.match_id FROM matches m""", nativeQuery = true)
-    fun findMatchIds(): Set<String>
+    @Query("""SELECT COUNT(m) FROM matches m WHERE m.match_id = :uuid""", nativeQuery = true)
+    fun countByMatchId(@Param("uuid") uuid: String): Int
 
 }
