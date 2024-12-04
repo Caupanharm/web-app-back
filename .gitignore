@@ -40,3 +40,6 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Others ###
+/src/main/resources/queries.txt

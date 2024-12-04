@@ -370,7 +370,7 @@ class CaupanharmController(
         if (playerResponse.statusCode != 200) return playerResponse
         val player = playerResponse.body as CaupanharmPlayer
         var visitedPlayers: MutableSet<String> = HashSet()
-        var playersToVisit: Queue<String> = LinkedList()
+        var playersToVisit: MutableSet<String> = HashSet()
         playersToVisit.add(player.puuid)
 
         logger.info("Starting populating database with seed $seed")
@@ -378,13 +378,9 @@ class CaupanharmController(
     }
 
     // 2s delay after each Henrik request to avoid reaching rate limit
-    fun populateDatabaseRecursive(playerId: String, region: String, queue: String, visitedPlayers: MutableSet<String>, playersToVisit: Queue<String>): CaupanharmResponse{
+    fun populateDatabaseRecursive(currentPlayer: String, region: String, queue: String, visitedPlayers: MutableSet<String>, playersToVisit: MutableSet<String>): CaupanharmResponse{
         try{
             while(playersToVisit.size > 0){
-                val currentPlayer = playersToVisit.remove()
-                logger.info("Checking player $currentPlayer, region $region, queue $queue")
-                logger.info("${visitedPlayers.size} players already visited")
-                logger.info("${playersToVisit.size} more players to visit")
                 // For every player that hasn't been checked already
                 if(!visitedPlayers.contains(currentPlayer)){
                     // Find every match
@@ -414,10 +410,9 @@ class CaupanharmController(
 
                     }
                     logger.info("Found ${foundMatches.size} corresponding match IDs")
-
                     // Save every match
                     foundMatches.forEach{ match ->
-                        if(fullMatchRepository.countByMatchId(match.matchId) == 0){
+                        if(matchXSRepository.countByMatchId(match.matchId) == 0){
                             var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
                             Thread.sleep(2200)
                             while(fullMatchResponse.statusCode != 200){
@@ -461,7 +456,7 @@ class CaupanharmController(
                                     if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
                                         val fullMatch = fullMatchResponse.body as RiotMatchFull
                                         fullMatch.players.forEach { player ->
-                                            if(!playersToVisit.contains(player.subject)){
+                                            if(!playersToVisit.contains(player.subject) && !visitedPlayers.contains(player.subject)){
                                                 playersToVisit.add(player.subject)
                                             }
                                         }
@@ -474,8 +469,15 @@ class CaupanharmController(
                     }
 
                     visitedPlayers.add(currentPlayer)
-                    // Call recursively with a new playerId
-                    populateDatabaseRecursive(playersToVisit.peek(), region, queue, visitedPlayers, playersToVisit)
+                    playersToVisit.remove(currentPlayer)
+                    logger.info("Matches saved for player $currentPlayer")
+                    logger.info("${visitedPlayers.size} players done visited")
+                    logger.info("${playersToVisit.size} players left to visit")
+
+                    val nextPlayer = playersToVisit.random()
+                    logger.info("Next player to visit: $nextPlayer")
+                    // Call recursively with a new playerId (chosen randomly to maximize match diversity)
+                    populateDatabaseRecursive(nextPlayer, region, queue, visitedPlayers, playersToVisit)
                 }
             }
             return CaupanharmResponse(200, "Done.", CaupanharmResponseType.EXCEPTION, "Should never happen, unless...")
