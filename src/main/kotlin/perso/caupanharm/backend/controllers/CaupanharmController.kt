@@ -11,6 +11,7 @@ import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgents
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
@@ -29,7 +30,6 @@ import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
-import java.util.*
 import kotlin.collections.HashSet
 import kotlin.math.abs
 
@@ -381,8 +381,6 @@ class CaupanharmController(
     fun populateDatabaseRecursive(currentPlayer: String, region: String, queue: String, visitedPlayers: MutableSet<String>, playersToVisit: MutableSet<String>): CaupanharmResponse{
         try{
             while(playersToVisit.size > 0){
-                // For every player that hasn't been checked already
-                if(!visitedPlayers.contains(currentPlayer)){
                     // Find every match
                     var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
                     Thread.sleep(2200)
@@ -431,7 +429,7 @@ class CaupanharmController(
                                 matchXSAgentRepository.saveAll(playersXS)
 
                                 playersXS.forEach { player ->
-                                    if(!playersToVisit.contains(player.playerId)){
+                                    if(!playersToVisit.contains(player.playerId) && !visitedPlayers.contains(player.playerId)){
                                         playersToVisit.add(player.playerId)
                                     }
                                 }
@@ -441,28 +439,12 @@ class CaupanharmController(
                                 logger.info("${fullMatchResponse.statusCode}   ${fullMatchResponse.message}")
                                 logger.info(fullMatchResponse.body.toString())
                             }
-                        }else{
+                        }else{ // If the match is already saved, get it from the database just to get its players
                             logger.info("Match ${match.matchId} from player $currentPlayer already saved")
-                            if(match == foundMatches[0]){
-                                var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                Thread.sleep(2200)
-                                try{
-                                    while(fullMatchResponse.statusCode != 200){
-                                        logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
-                                        logger.info("Trying again")
-                                        fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                        Thread.sleep(2200)
-                                    }
-                                    if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
-                                        val fullMatch = fullMatchResponse.body as RiotMatchFull
-                                        fullMatch.players.forEach { player ->
-                                            if(!playersToVisit.contains(player.subject) && !visitedPlayers.contains(player.subject)){
-                                                playersToVisit.add(player.subject)
-                                            }
-                                        }
-                                    }
-                                }catch(e: Exception){
-                                    logger.error(e.stackTraceToString())
+                            val savedMatchPlayers: List<String> = matchXSAgentRepository.findByMatchId(match.matchId)
+                            savedMatchPlayers.forEach{ player ->
+                                if(!playersToVisit.contains(player) && !visitedPlayers.contains(player)){
+                                    playersToVisit.add(player)
                                 }
                             }
                         }
@@ -478,7 +460,6 @@ class CaupanharmController(
                     logger.info("Next player to visit: $nextPlayer")
                     // Call recursively with a new playerId (chosen randomly to maximize match diversity)
                     populateDatabaseRecursive(nextPlayer, region, queue, visitedPlayers, playersToVisit)
-                }
             }
             return CaupanharmResponse(200, "Done.", CaupanharmResponseType.EXCEPTION, "Should never happen, unless...")
         }catch(e: Exception){

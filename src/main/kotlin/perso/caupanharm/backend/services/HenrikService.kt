@@ -22,14 +22,16 @@ class HenrikService(private val henrikClient: WebClient) {
 
     fun getPlayerFromName(username: String): Mono<CaupanharmResponse> {
         val splittedName = username.split('#')
-        if (splittedName.size != 2) return Mono.just(
-            CaupanharmResponse(
+        if (splittedName.size != 2) {
+            val caupanharmResponse = CaupanharmResponse(
                 500,
                 "Player not found",
                 CaupanharmResponseType.EXCEPTION,
                 "Requested player: $username"
             )
-        )
+            //logger.info("Returning $caupanharmResponse")
+            return Mono.just(caupanharmResponse)
+        }
 
         logger.info("GET  /valorant/v2/account/${splittedName[0]}/${splittedName[1]}?force=true")
         return try {
@@ -37,22 +39,34 @@ class HenrikService(private val henrikClient: WebClient) {
                 .uri("/valorant/v2/account/${splittedName[0]}/${splittedName[1]}?force=true")
                 .exchangeToMono { response ->
                     when (response.statusCode().value()) {
-                        in 200..299 -> response.bodyToMono(HenrikAccount::class.java)
-                            .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
+                        in 200..299 -> {
+                            val caupanharmResponse = response.bodyToMono(HenrikAccount::class.java)
+                                .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
+                            //logger.info("Returning $caupanharmResponse")
+                            caupanharmResponse
 
-                        else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors ->
-                                CaupanharmResponse(
-                                    502,
-                                    null,
-                                    CaupanharmResponseType.EXCEPTION,
-                                    henrikErrors
-                                )
-                            }
+                        }
+
+                        else -> {
+                            val caupanharmResponse = response.bodyToMono(HenrikErrors::class.java)
+                                .map { henrikErrors ->
+                                    //logger.info("Returning ${CaupanharmResponseType.EXCEPTION}")
+                                    CaupanharmResponse(
+                                        502,
+                                        null,
+                                        CaupanharmResponseType.EXCEPTION,
+                                        henrikErrors
+                                    )
+                                }
+                            //logger.info("Returning $caupanharmResponse")
+                            caupanharmResponse
+                        }
                     }
                 }
         } catch (e: Exception) {
-            Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString()))
+            val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString())
+            //logger.info("Returning $caupanharmResponse")
+            Mono.just(caupanharmResponse)
         }
     }
 
@@ -80,28 +94,33 @@ class HenrikService(private val henrikClient: WebClient) {
                     when (response.statusCode().value()) {
                         in 200..299 -> response.bodyToMono(RawMatchHistory::class.java)
                             .map { rawMatchHistory ->
-                                CaupanharmResponse(
+                                val caupanharmResponse = CaupanharmResponse(
                                     200,
                                     null,
                                     CaupanharmResponseType.RAW_MATCH_HISTORY,
                                     rawMatchHistory
                                 )
+                                //logger.info("Returning $caupanharmResponse")
+                                caupanharmResponse
                             }
-
                         else -> response.bodyToMono(HenrikErrors::class.java)
                             .map { henrikErrors ->
-                                CaupanharmResponse(
+                                val caupanharmResponse = CaupanharmResponse(
                                     502,
                                     null,
                                     CaupanharmResponseType.EXCEPTION,
                                     henrikErrors
                                 )
+                                //logger.info("Returning $caupanharmResponse")
+                                caupanharmResponse
                             }
                     }
                 }
 
         } catch (e: Exception) {
-            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
+            val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString())
+            //logger.info("Returning $caupanharmResponse")
+            return Mono.just(caupanharmResponse)
         }
     }
 
@@ -113,12 +132,14 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("queries", "")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
-        return henrikClient.post()
+        val caupanharmResponse = henrikClient.post()
             .uri("https://api.henrikdev.xyz/valorant/v1/raw")
             .body(BodyInserters.fromValue(bodyMap))
             .exchangeToMono { response ->
                 response.bodyToMono(String::class.java)
             }
+        //logger.info("Returning $caupanharmResponse")
+        return caupanharmResponse
     }
 
 
@@ -130,35 +151,41 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("queries", "")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
-        return try {
-            henrikClient.post()
+        try {
+            return henrikClient.post()
                 .uri("https://api.henrikdev.xyz/valorant/v1/raw")
                 .body(BodyInserters.fromValue(bodyMap))
                 .exchangeToMono { response ->
                     when (response.statusCode().value()) {
                         in 200..299 -> response.bodyToMono(RiotMatchFull::class.java)
                             .map { match ->
-                                CaupanharmResponse(
+                                val caupanharmResponse = CaupanharmResponse(
                                     200,
                                     null,
                                     CaupanharmResponseType.RAW_MATCH,
                                     match
                                 )
+                                //logger.info("Returning $caupanharmResponse")
+                                caupanharmResponse
                             }
 
-                        else -> response.bodyToMono(HenrikErrors::class.java)
-                            .map { henrikErrors ->
-                                CaupanharmResponse(
+                        else -> response.bodyToMono(String::class.java)
+                            .map { error ->
+                                val caupanharmResponse = CaupanharmResponse(
                                     502,
                                     null,
                                     CaupanharmResponseType.EXCEPTION,
-                                    henrikErrors
+                                    error
                                 )
+                                //logger.info("Returning $caupanharmResponse")
+                                caupanharmResponse
                             }
                     }
                 }
         } catch (e: Exception) {
-            Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
+            val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString())
+            //logger.info("Returning $caupanharmResponse")
+            return Mono.just(caupanharmResponse)
         }
     }
 }

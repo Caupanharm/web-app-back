@@ -102,7 +102,7 @@ data class RiotMatchPlayer(
     val partyId: String,
     val characterId: String,
     val stats: RiotPlayerStats,
-    val roundDamage: List<RiotMatchPlayerRoundDamage>,
+    val roundDamage: List<RiotMatchPlayerRoundDamage>?,
     val competitiveTier: Int,
     val isObserver: Boolean,
     val playerCard: String,
