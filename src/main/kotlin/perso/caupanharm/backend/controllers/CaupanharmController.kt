@@ -5,7 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
-import perso.caupanharm.backend.repositories.MatchRepository
+import perso.caupanharm.backend.repositories.FullMatchRepository
 import perso.caupanharm.backend.services.HenrikService
 import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
@@ -23,6 +23,8 @@ import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
+import perso.caupanharm.backend.repositories.MatchXSAgentRepository
+import perso.caupanharm.backend.repositories.MatchXSRepository
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -43,7 +45,13 @@ class CaupanharmController(
 
 ) {
     @Autowired
-    lateinit var repository: MatchRepository
+    lateinit var fullMatchRepository: FullMatchRepository
+
+    @Autowired
+    lateinit var matchXSRepository: MatchXSRepository
+
+    @Autowired
+    lateinit var matchXSAgentRepository: MatchXSAgentRepository
 
     @GetMapping("/bracket")
     fun getBracket(): List<BracketMatchData> {
@@ -79,7 +87,7 @@ class CaupanharmController(
                     henrikService.getHistory(puuid, region, queue, start, end)
                         .flatMap { rawHistoryResponse ->
                             val caupanharmMatches: MutableList<CaupanharmMatchFull> =
-                                repository.findByPlayerName(username)
+                                fullMatchRepository.findByPlayerName(username)
                                     .map { it.toCaupanharmMatchFull() }
                                     .toMutableList()
 
@@ -101,7 +109,7 @@ class CaupanharmController(
                                             .doOnNext { match ->
                                                 try {
                                                     val caupanharmMatchFull = match.toCaupanharmMatchFull()
-                                                    repository.save(caupanharmMatchFull.toPostgresMatch())
+                                                    fullMatchRepository.save(caupanharmMatchFull.toPostgresMatch())
                                                     matchesAdded++
                                                     savedMatches++
                                                     caupanharmMatches.add(caupanharmMatchFull)
@@ -165,8 +173,26 @@ class CaupanharmController(
             .map{ response ->
                 if(response.statusCode == 200){
                     val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
-                    if(repository.countByMatchId(matchId) == 0) repository.save(match.toPostgresMatch())
+                    if(fullMatchRepository.countByMatchId(matchId) == 0) fullMatchRepository.save(match.toPostgresMatch())
                     CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, match)
+                }else{
+                    response
+                }
+            }
+    }
+
+    @GetMapping("/matchXS")
+    fun getMatchXS(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
+        logger.info("Endpoint fetched: matchXS with params: matchId=${matchId}")
+
+
+        return henrikService.getMatch(matchId, region)
+            .map{ response ->
+                if(response.statusCode == 200){
+                    val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
+                    matchXSRepository.save(match.toPostgresMatchXS())
+                    matchXSAgentRepository.saveAll(match.toPostgresMatchXSAgents())
+                    CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_XS, match.toPostgresMatchXSAgents())
                 }else{
                     response
                 }
@@ -180,7 +206,7 @@ class CaupanharmController(
         @RequestParam("id") matchId: String
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
-        val match = repository.findByMatchId(matchId)
+        val match = fullMatchRepository.findByMatchId(matchId)
         return if(match != null) {
                 fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
             } else {
@@ -196,7 +222,7 @@ class CaupanharmController(
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: teams with params: username=$player, agents=$agents")
         try {
-            val rawResults = repository.findTeamsByPlayerName(player)
+            val rawResults = fullMatchRepository.findTeamsByPlayerName(player)
             if (rawResults.isEmpty()) return Mono.just(
                 CaupanharmResponse(
                     500,
@@ -391,7 +417,7 @@ class CaupanharmController(
 
                     // Save every match
                     foundMatches.forEach{ match ->
-                        if(repository.countByMatchId(match.matchId) == 0){
+                        if(fullMatchRepository.countByMatchId(match.matchId) == 0){
                             var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
                             Thread.sleep(2200)
                             while(fullMatchResponse.statusCode != 200){
@@ -402,13 +428,18 @@ class CaupanharmController(
                             }
 
                             if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
-                                val fullMatch = fullMatchResponse.body as RiotMatchFull
-                                fullMatch.players.forEach { player ->
-                                    if(!playersToVisit.contains(player.subject)){
-                                        playersToVisit.add(player.subject)
+                                val fullMatch = (fullMatchResponse.body as RiotMatchFull).toCaupanharmMatchFull()
+                                val matchXS = fullMatch.toPostgresMatchXS()
+                                val playersXS = fullMatch.toPostgresMatchXSAgents()
+
+                                matchXSRepository.save(matchXS)
+                                matchXSAgentRepository.saveAll(playersXS)
+
+                                playersXS.forEach { player ->
+                                    if(!playersToVisit.contains(player.playerId)){
+                                        playersToVisit.add(player.playerId)
                                     }
                                 }
-                                repository.save(fullMatch.toCaupanharmMatchFull().toPostgresMatch())
                                 logger.info("Saved match ${match.matchId} from player $currentPlayer")
                             }else{
                                 logger.info("Couldn't save match ${match.matchId} from player $currentPlayer")
