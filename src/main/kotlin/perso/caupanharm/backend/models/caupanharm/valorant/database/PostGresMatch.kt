@@ -53,7 +53,7 @@ data class PostGresMatch(
         queue = null,
         season = "",
         players = emptyList(),
-        score = CaupanharmMatchScore(0, 0),
+        score = CaupanharmMatchScore(0, 0,0,0,0,0),
         rounds = emptyList(),
         kills = emptyList()
     )

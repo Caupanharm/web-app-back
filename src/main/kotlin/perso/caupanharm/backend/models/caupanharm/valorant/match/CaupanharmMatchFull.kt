@@ -1,6 +1,10 @@
 package perso.caupanharm.backend.models.caupanharm.valorant.match
 
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatch
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
+import perso.caupanharm.backend.models.riot.assets.Agents
+import java.time.Instant
 
 data class CaupanharmMatchFull(
     val metadata: CaupanharmMatchMetadata,
@@ -22,6 +26,33 @@ data class CaupanharmMatchFull(
             rounds,
             kills
         )
+    }
+
+    fun toPostgresMatchXS(): PostGresMatchXS{
+        return PostGresMatchXS(
+            matchId  = metadata.matchId,
+            date = Instant.ofEpochMilli(metadata.gameStartMillis),
+            map = metadata.map,
+            rank = players.filter{it.rank != null}.sumOf{ it.rank!! } / players.count { it.rank != null },
+            blueScore = score.blue,
+            redScore = score.red,
+            blueScoreAttack = score.blueAttack,
+            blueScoreDefense = score.blueDefense,
+            redScoreAttack = score.redAttack,
+            redScoreDefense = score.redDefense
+        )
+    }
+
+    fun toPostgresMatchXSAgents(): List<PostGresMatchXSPlayer>{
+        return players.map{ player ->
+            PostGresMatchXSPlayer(
+                matchXS = toPostgresMatchXS(),
+                playerId = player.playerId,
+                agent = player.agent,
+                agentClass = Agents.getCategoryFromDisplayName(player.agent),
+                team = player.team
+            )
+        }
     }
 }
 
@@ -82,7 +113,11 @@ data class RoundEconomy(
 
 data class CaupanharmMatchScore(
     val blue: Int,
-    val red: Int
+    val red: Int,
+    val blueAttack: Int,
+    val blueDefense: Int,
+    val redAttack: Int,
+    val redDefense: Int
 )
 
 data class CaupanharmMatchRound(

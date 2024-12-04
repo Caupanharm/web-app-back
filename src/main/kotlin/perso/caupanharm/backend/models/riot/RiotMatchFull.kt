@@ -24,7 +24,31 @@ data class RiotMatchFull(
     private fun createCaupanharmScore(): CaupanharmMatchScore {
         val blue = if (teams[0].teamId == "Blue") teams[0].roundsWon else teams[1].roundsWon
         val red = if (teams[0].teamId == "Red") teams[0].roundsWon else teams[1].roundsWon
-        return CaupanharmMatchScore(blue, red)
+        var blueAttack = 0
+        var blueDefense = 0
+        var redAttack = 0
+        var redDefense = 0
+
+        roundResults.forEach { round ->
+            when{
+                round.roundNum <= 11 || (round.roundNum >= 24 && round.roundNum % 2 == 0) -> {
+                    if(round.winningTeam == "Blue"){
+                        blueDefense++
+                    }else{
+                        redAttack++
+                    }
+                }
+                round.roundNum <= 23 || (round.roundNum >= 24 && round.roundNum %2 == 1) -> {
+                    if(round.winningTeam == "Blue"){
+                        blueAttack++
+                    }else{
+                        redDefense++
+                    }
+                }
+            }
+        }
+
+        return CaupanharmMatchScore(blue, red, blueAttack, blueDefense, redAttack, redDefense)
     }
 }
 
@@ -250,7 +274,7 @@ data class RiotMatchRoundResult(
     private fun getDefuseEvent(): BombEvent? {
         if (bombDefuser == null) return null
         return BombEvent(
-            roundTimeMillis = defuseRoundTime!!,
+            roundTimeMillis = defuseRoundTime,
             site = plantSite!!,
             location = defuseLocation!!.toCaupanharmLocation(),
             player = bombDefuser,
