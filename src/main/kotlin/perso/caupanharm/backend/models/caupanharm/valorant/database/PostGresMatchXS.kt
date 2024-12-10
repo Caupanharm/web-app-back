@@ -58,6 +58,8 @@ data class PostGresMatchXSPlayer(
     @Column(name = "player_id")
     val playerId: String,
 
+    val rank: Int,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "match_id", nullable = false)
     val matchXS: PostGresMatchXS,
@@ -84,6 +86,7 @@ data class PostGresMatchXSPlayer(
             redScoreDefense = 0
         ),
         playerId = "",
+        rank = 0,
         agent = "",
         agentClass = "",
         team = ""

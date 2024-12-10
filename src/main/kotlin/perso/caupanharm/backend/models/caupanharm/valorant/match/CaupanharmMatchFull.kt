@@ -5,6 +5,7 @@ import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatc
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
 import perso.caupanharm.backend.models.riot.assets.Agents
 import java.time.Instant
+import kotlin.math.roundToInt
 
 data class CaupanharmMatchFull(
     val metadata: CaupanharmMatchMetadata,
@@ -33,7 +34,7 @@ data class CaupanharmMatchFull(
             matchId  = metadata.matchId,
             date = Instant.ofEpochMilli(metadata.gameStartMillis),
             map = metadata.map,
-            rank = players.filter{it.rank != null}.sumOf{ it.rank!! } / players.count { it.rank != null },
+            rank = (players.filter { it.rank != 0 }.sumOf { it.rank }.toDouble() / players.count { it.rank != 0 }).roundToInt(),
             blueScore = score.blue,
             redScore = score.red,
             blueScoreAttack = score.blueAttack,
@@ -48,6 +49,7 @@ data class CaupanharmMatchFull(
             PostGresMatchXSPlayer(
                 matchXS = toPostgresMatchXS(),
                 playerId = player.playerId,
+                rank = player.rank,
                 agent = player.agent,
                 agentClass = Agents.getCategoryFromDisplayName(player.agent),
                 team = player.team
@@ -70,7 +72,7 @@ data class CaupanharmMatchPlayer(
     val name: String, // includes tag
     val team: String,
     val party: String,
-    val rank: Int?,
+    val rank: Int,
     val agent: String,
     val stats: CaupanharmPlayerStats,
     val abilityCasts: CaupanharmAbilities,

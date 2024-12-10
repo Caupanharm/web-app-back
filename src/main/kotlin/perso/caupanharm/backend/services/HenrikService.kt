@@ -143,7 +143,7 @@ class HenrikService(private val henrikClient: WebClient) {
     }
 
 
-    fun getMatch(uuid: String, region: String): Mono<CaupanharmResponse> {
+    fun getMatch(uuid: String, region: String = "eu"): Mono<CaupanharmResponse> {
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchdetails"),
             Pair("value", uuid),

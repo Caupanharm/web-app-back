@@ -1,6 +1,6 @@
 package perso.caupanharm.backend.models.caupanharm.valorant.analysis
 
-data class MatchesAgentsAnalysis(
+data class MatchesAgentsAnalysisFull(
     val globalTeamCount: Int,
     val allyTeamCount: Int?,
     val enemyTeamCount: Int?,

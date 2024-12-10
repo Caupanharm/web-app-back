@@ -22,6 +22,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa:3.4.0")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
@@ -31,7 +32,8 @@ dependencies {
 	implementation("org.postgresql:postgresql:42.7.4")
 	implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.8.3")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.1.0")
+	testImplementation("org.junit.jupiter:junit-jupiter-api:5.11.3")
 	testImplementation("ch.qos.logback:logback-classic:1.5.0")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -42,6 +44,7 @@ kotlin {
 	}
 }
 
-tasks.withType<Test> {
+tasks.test {
 	useJUnitPlatform()
 }
+

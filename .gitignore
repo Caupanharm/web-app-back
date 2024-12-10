@@ -42,4 +42,4 @@ out/
 .kotlin
 
 ### Others ###
-/src/main/resources/queries.txt
+/src/main/resources/queries.md
