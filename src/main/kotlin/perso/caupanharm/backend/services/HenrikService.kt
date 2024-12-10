@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
 class HenrikService(private val henrikClient: WebClient) {
     private val logger = KotlinLogging.logger {}
 
-    @Value("\${valorant.season.current}")
+    @Value("\${valorant.current.season}")
     lateinit var currentValSeason: String
 
     fun getPlayerFromName(username: String): Mono<CaupanharmResponse> {
