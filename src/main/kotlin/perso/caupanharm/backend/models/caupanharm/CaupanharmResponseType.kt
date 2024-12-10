@@ -4,7 +4,7 @@ enum class CaupanharmResponseType {
     PLAYER,
     MATCH_HISTORY,
     MATCH_XS,
-    MATCH_XS_AGENTS,
+    MATCH_XS_STATS,
     MATCH_FULL,
     MATCH_ANALYSIS,
     MATCHES_AGENTS_ANALYSIS,

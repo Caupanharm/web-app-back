@@ -13,6 +13,7 @@ import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
 import perso.caupanharm.backend.models.caupanharm.valorant.analysis.MapStats
+import perso.caupanharm.backend.models.caupanharm.valorant.analysis.MapStatsAgents
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresCompQuery
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
@@ -27,6 +28,7 @@ import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
+import perso.caupanharm.backend.models.riot.assets.Agents
 import perso.caupanharm.backend.repositories.MatchXSAgentRepository
 import perso.caupanharm.backend.repositories.MatchXSRepository
 import perso.caupanharm.backend.transformers.FullMatchTransformer
@@ -222,30 +224,68 @@ class CaupanharmController(
     @GetMapping("mapsStats")
     fun getMapsStats(): Any {
         logger.info("Endpoint fetched: mapsStats")
-        var computedData = mutableListOf<MapStats>()
+        val computedData = mutableListOf<MapStats>()
+        val allMaps = matchXSRepository.getMapRates(null)
+        val allAgents = mutableListOf<MapStatsAgents>()
+        Agents.entries.forEach { agent ->
+            val agentData = matchXSAgentRepository.getMapAgentWinrate(null, agent.displayName)
+            allAgents.add(
+                MapStatsAgents(
+                    name = agent.displayName,
+                    occurences = agentData["total_matches"] as Long,
+                    winrate = agentData["win_rate"] as Double,
+                    atkWinrate = agentData["attack_win_rate"] as Double,
+                    defWinrate = agentData["defense_win_rate"] as Double
+                )
+            )
+        }
+        val allMapsStats = MapStats(
+            name = "Total",
+            games = allMaps["amount"] as Long,
+            pickRate = 1.0,
+            atkWinrate = allMaps["attack_winrate"] as Double,
+            defWinrate = allMaps["defense_winrate"] as Double,
+            topAgents = allAgents.sortedByDescending { it.winrate }
+        )
+        computedData.add(allMapsStats)
+
         mapPool.forEach { map ->
-            val currentMap = matchXSRepository.getMapStats(map)
+            val currentMap = matchXSRepository.getMapRates(map)
+            val currentAgents = mutableListOf<MapStatsAgents>()
+            Agents.entries.forEach { agent ->
+                val agentData = matchXSAgentRepository.getMapAgentWinrate(map, agent.displayName)
+                currentAgents.add(
+                    MapStatsAgents(
+                        name = agent.displayName,
+                        occurences = agentData["total_matches"] as Long,
+                        winrate = agentData["win_rate"] as Double,
+                        atkWinrate = agentData["attack_win_rate"] as Double,
+                        defWinrate = agentData["defense_win_rate"] as Double
+                    )
+                )
+            }
             val currentMapStats = MapStats(
                 name = map,
-                occurences = currentMap["amount"] as Long,
+                games = currentMap["amount"] as Long,
+                pickRate = (currentMap["amount"] as Long).toDouble() / allMapsStats.pickRate,
                 atkWinrate = currentMap["attack_winrate"] as Double,
                 defWinrate = currentMap["defense_winrate"] as Double,
-                blueAttackWinrate = currentMap["blue_attack_winrate"] as Double,
-                blueDefenseWinrate = currentMap["blue_defense_winrate"] as Double,
-                redAttackWinrate = currentMap["red_attack_winrate"] as Double,
-                redDefenseWinrate = currentMap["red_defense_winrate"] as Double
+                topAgents = currentAgents.sortedByDescending { it.winrate }
             )
             computedData.add(currentMapStats)
         }
 
-        return computedData
+        logger.info("Computation finished")
+        return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MATCH_XS_STATS,computedData))
     }
+
+
 
     @GetMapping("comps")
     fun getCompsCustom(@RequestParam("map") map: String?, @RequestParam("agents") agentsParam: String?): Any {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam")
 
-        val matches = matchXSRepository.findMatchesWithAgentsAndMap(map, agentsParam)
+        val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, agentsParam)
             .map {
                 PostGresCompQuery(
                     map = it["map"] as String,
