@@ -11,7 +11,8 @@ import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
-import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresCompQuery
+import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgents
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
@@ -30,6 +31,7 @@ import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
+import java.util.*
 import kotlin.collections.HashSet
 import kotlin.math.abs
 
@@ -215,8 +217,28 @@ class CaupanharmController(
 
     }
 
+    @GetMapping("comps")
+    fun getComps(@RequestParam("map") map: String?, @RequestParam("agents") agentsParam: String?): Any{
+        logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam")
+
+        val matches = matchXSRepository.findMatchesWithAgentsAndMap(map, agentsParam)
+            .map {
+            PostGresCompQuery(
+                allyScore = it["ally_score"] as Int,
+                enemyScore = it["enemy_score"] as Int,
+                attackScore = it["attack_score"] as Int,
+                defenseScore = it["defense_score"] as Int,
+                teamAgents = (it["team_agents"] as String).split(',')
+            )
+        }
+
+        return matches
+
+    }
+
+
     @GetMapping("teams")
-    fun getTeams(
+    fun getTeamsV1(
         @RequestParam("username") player: String,
         @RequestParam("agents") agents: String
     ): Mono<CaupanharmResponse> {
@@ -440,8 +462,7 @@ class CaupanharmController(
                                 logger.info(fullMatchResponse.body.toString())
                             }
                         }else{ // If the match is already saved, get it from the database just to get its players
-                            logger.info("Match ${match.matchId} from player $currentPlayer already saved")
-                            val savedMatchPlayers: List<String> = matchXSAgentRepository.findByMatchId(match.matchId)
+                            val savedMatchPlayers: List<String> = matchXSAgentRepository.findPlayerIdByMatchId(match.matchId)
                             savedMatchPlayers.forEach{ player ->
                                 if(!playersToVisit.contains(player) && !visitedPlayers.contains(player)){
                                     playersToVisit.add(player)
@@ -466,4 +487,32 @@ class CaupanharmController(
             return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.stackTraceToString())
         }
     }
+
+    @GetMapping("fixDatabase")
+    fun fixDatabase(){
+        logger.info("Fixing miscalculated ranks")
+        var matchesToFix: Queue<PostGresMatchXS> = LinkedList(matchXSRepository.findByMatchRank(-1))
+        logger.info("Found ${matchesToFix.size} matches to fix")
+        while(matchesToFix.size > 0){
+            var currentDbMatch = matchesToFix.remove()
+            var currentDbMatchAgents = matchXSAgentRepository.findPlayersByMatchId(currentDbMatch.matchId)
+            var fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
+            Thread.sleep(2200)
+            while(fullMatchResponse.statusCode != 200){
+                logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
+                logger.info("Trying again")
+                fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
+                Thread.sleep(2200)
+            }
+            val fullMatch = (fullMatchResponse.body as RiotMatchFull).toCaupanharmMatchFull()
+            val matchXS = fullMatch.toPostgresMatchXS()
+            val playersXS = fullMatch.toPostgresMatchXSAgents()
+
+            //matchXSRepository.save(matchXS)
+            //matchXSAgentRepository.saveAll(playersXS)
+            logger.info("${matchesToFix.size} matches left to fix")
+        }
+
+    }
+
 }

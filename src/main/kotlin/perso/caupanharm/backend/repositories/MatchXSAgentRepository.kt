@@ -8,6 +8,9 @@ import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatc
 interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
 
     @Query("""SELECT m.player_id FROM matches_xs_agents m WHERE m.match_id = :uuid""", nativeQuery = true)
-    fun findByMatchId(@Param("uuid") uuid: String): List<String>
+    fun findPlayerIdByMatchId(@Param("uuid") matchId: String): List<String>
+
+    @Query("""SELECT m.* FROM matches_xs_agents m WHERE m.match_id = :uuid""", nativeQuery = true)
+    fun findPlayersByMatchId(@Param("uuid") matchId: String): List<PostGresMatchXSPlayer>
 
 }
