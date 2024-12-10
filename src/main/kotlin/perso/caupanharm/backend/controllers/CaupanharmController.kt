@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
 import perso.caupanharm.backend.repositories.FullMatchRepository
 import perso.caupanharm.backend.services.HenrikService
@@ -11,6 +12,7 @@ import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
+import perso.caupanharm.backend.models.caupanharm.valorant.analysis.MapStats
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresCompQuery
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
@@ -55,6 +57,9 @@ class CaupanharmController(
     @Autowired
     lateinit var matchXSAgentRepository: MatchXSAgentRepository
 
+    @Value("\${valorant.current.maps}")
+    lateinit var mapPool: List<String>
+
     @GetMapping("/bracket")
     fun getBracket(): List<BracketMatchData> {
         logger.info("Endpoint fetched: bracket")
@@ -95,7 +100,8 @@ class CaupanharmController(
 
                             if (rawHistoryResponse.bodyType == CaupanharmResponseType.RAW_MATCH_HISTORY) {
                                 val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.matchId }
-                                val allMatchesIds = (rawHistoryResponse.body as RawMatchHistory).history.map { it.matchId }
+                                val allMatchesIds =
+                                    (rawHistoryResponse.body as RawMatchHistory).history.map { it.matchId }
                                 val missingMatchesIds = allMatchesIds.subtract(caupanharmMatchesIds.toSet())
                                 var savedMatches = caupanharmMatchesIds.size
                                 var matchesAdded = 0
@@ -162,80 +168,98 @@ class CaupanharmController(
     }
 
     @GetMapping("/rawMatch")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<String>{
+    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<String> {
         logger.info("Endpoint fetched: rawMatch with params: matchId=${matchId}")
         return henrikService.getRawMatch(matchId, region)
     }
 
     @GetMapping("/match")
-    fun getMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
+    fun getMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
 
         return henrikService.getMatch(matchId, region)
-            .map{ response ->
-                if(response.statusCode == 200){
+            .map { response ->
+                if (response.statusCode == 200) {
                     val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
-                    if(fullMatchRepository.countByMatchId(matchId) == 0) fullMatchRepository.save(match.toPostgresMatch())
+                    if (fullMatchRepository.countByMatchId(matchId) == 0) fullMatchRepository.save(match.toPostgresMatch())
                     CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, match)
-                }else{
+                } else {
                     response
                 }
             }
     }
 
     @GetMapping("/matchXS")
-    fun getMatchXS(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse>{
+    fun getMatchXS(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: matchXS with params: matchId=${matchId}")
 
 
         return henrikService.getMatch(matchId, region)
-            .map{ response ->
-                if(response.statusCode == 200){
+            .map { response ->
+                if (response.statusCode == 200) {
                     val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
                     matchXSRepository.save(match.toPostgresMatchXS())
                     matchXSAgentRepository.saveAll(match.toPostgresMatchXSAgents())
                     CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_XS, match.toPostgresMatchXSAgents())
-                }else{
+                } else {
                     response
                 }
             }
     }
 
-
     @GetMapping("analysis")
-    fun getAnalysedMatch(
-        @RequestParam("player") player: String,
-        @RequestParam("id") matchId: String
-    ): Mono<CaupanharmResponse> {
+    fun getAnalysedMatch(@RequestParam("player") player: String, @RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
         val match = fullMatchRepository.findByMatchId(matchId)
-        return if(match != null) {
-                fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
-            } else {
-                Mono.just(CaupanharmResponse(500, "Match not found",CaupanharmResponseType.EXCEPTION, matchId))
-            }
+        return if (match != null) {
+            fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
+        } else {
+            Mono.just(CaupanharmResponse(500, "Match not found", CaupanharmResponseType.EXCEPTION, matchId))
+        }
 
     }
 
+    @GetMapping("mapsStats")
+    fun getMapsStats(): Any {
+        logger.info("Endpoint fetched: mapsStats")
+        var computedData = mutableListOf<MapStats>()
+        mapPool.forEach { map ->
+            val currentMap = matchXSRepository.getMapStats(map)
+            val currentMapStats = MapStats(
+                name = map,
+                occurences = currentMap["amount"] as Long,
+                atkWinrate = currentMap["attack_winrate"] as Double,
+                defWinrate = currentMap["defense_winrate"] as Double,
+                blueAttackWinrate = currentMap["blue_attack_winrate"] as Double,
+                blueDefenseWinrate = currentMap["blue_defense_winrate"] as Double,
+                redAttackWinrate = currentMap["red_attack_winrate"] as Double,
+                redDefenseWinrate = currentMap["red_defense_winrate"] as Double
+            )
+            computedData.add(currentMapStats)
+        }
+
+        return computedData
+    }
+
     @GetMapping("comps")
-    fun getComps(@RequestParam("map") map: String?, @RequestParam("agents") agentsParam: String?): Any{
+    fun getCompsCustom(@RequestParam("map") map: String?, @RequestParam("agents") agentsParam: String?): Any {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam")
 
         val matches = matchXSRepository.findMatchesWithAgentsAndMap(map, agentsParam)
             .map {
-            PostGresCompQuery(
-                allyScore = it["ally_score"] as Int,
-                enemyScore = it["enemy_score"] as Int,
-                attackScore = it["attack_score"] as Int,
-                defenseScore = it["defense_score"] as Int,
-                teamAgents = (it["team_agents"] as String).split(',')
-            )
-        }
+                PostGresCompQuery(
+                    map = it["map"] as String,
+                    allyScore = it["ally_score"] as Int,
+                    enemyScore = it["enemy_score"] as Int,
+                    attackScore = it["attack_score"] as Int,
+                    defenseScore = it["defense_score"] as Int,
+                    teamAgents = (it["team_agents"] as String).split(',')
+                )
+            }
 
         return matches
 
     }
-
 
     @GetMapping("teams")
     fun getTeamsV1(
@@ -345,37 +369,45 @@ class CaupanharmController(
 
             var winrate = if (totalPlayed == 0) null else totalWins.toDouble() / totalPlayed * 100
             var averageScoreDifference = if (totalPlayed == 0) null else globalScoreDifference.toDouble() / totalPlayed
-            var averageScoreDifferenceWhenWinning = if (totalWins == 0) null else globalScoreDifferenceWhenWinning.toDouble() / totalWins
-            var averageScoreDifferenceWhenLosing = if (totalLosses == 0) null else globalScoreDifferenceWhenLosing.toDouble() / totalLosses
+            var averageScoreDifferenceWhenWinning =
+                if (totalWins == 0) null else globalScoreDifferenceWhenWinning.toDouble() / totalWins
+            var averageScoreDifferenceWhenLosing =
+                if (totalLosses == 0) null else globalScoreDifferenceWhenLosing.toDouble() / totalLosses
 
             var winrateWith = if (playedWith == 0) null else wonWith.toDouble() / playedWith * 100
-            var averageScoreDifferenceWith = if (playedWith == 0) null else (scoreDifferenceWhenWinningWith - scoreDifferenceWhenLosingWith).toDouble() / playedWith
-            var averageScoreDifferenceWhenWinningWith = if (playedWith == 0) null else scoreDifferenceWhenWinningWith.toDouble() / wonWith
-            var averageScoreDifferenceWhenLosingWith = if (playedWith == 0) null else scoreDifferenceWhenLosingWith.toDouble() / lostWith
+            var averageScoreDifferenceWith =
+                if (playedWith == 0) null else (scoreDifferenceWhenWinningWith - scoreDifferenceWhenLosingWith).toDouble() / playedWith
+            var averageScoreDifferenceWhenWinningWith =
+                if (playedWith == 0) null else scoreDifferenceWhenWinningWith.toDouble() / wonWith
+            var averageScoreDifferenceWhenLosingWith =
+                if (playedWith == 0) null else scoreDifferenceWhenLosingWith.toDouble() / lostWith
 
             var winrateAgainst = if (playedAgainst == 0) null else wonAgainst.toDouble() / playedAgainst * 100
-            var averageScoreDifferenceAgainst = if (playedAgainst == 0) null else (scoreDifferenceWhenWinningAgainst - scoreDifferenceWhenLosingAgainst).toDouble() / playedAgainst
-            var averageScoreDifferenceWhenWinningAgainst = if (playedAgainst == 0) null else scoreDifferenceWhenWinningAgainst.toDouble() / wonAgainst
-            var averageScoreDifferenceWhenLosingAgainst = if (playedAgainst == 0) null else scoreDifferenceWhenLosingAgainst.toDouble() / lostAgainst
+            var averageScoreDifferenceAgainst =
+                if (playedAgainst == 0) null else (scoreDifferenceWhenWinningAgainst - scoreDifferenceWhenLosingAgainst).toDouble() / playedAgainst
+            var averageScoreDifferenceWhenWinningAgainst =
+                if (playedAgainst == 0) null else scoreDifferenceWhenWinningAgainst.toDouble() / wonAgainst
+            var averageScoreDifferenceWhenLosingAgainst =
+                if (playedAgainst == 0) null else scoreDifferenceWhenLosingAgainst.toDouble() / lostAgainst
 
             println(
-                    "Moyennes de la compo $agentsSearch dans les parties de $player:\n\n" +
-                            "Au global:\n" +
-                            "Winrate: $winrate% ($totalWins/$totalPlayed)\n" +
-                            "Ecart au score: $averageScoreDifference\n" +
-                            "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinning\n" +
-                            "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosing\n\n" +
-                            "Avec cette compo:\n" +
-                            "Winrate: $winrateWith% ($wonWith/$playedWith)\n" +
-                            "Ecart au score: $averageScoreDifferenceWith\n" +
-                            "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningWith\n" +
-                            "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingWith\n\n" +
-                            "Contre cette compo:\n" +
-                            "Winrate: $winrateAgainst% ($wonAgainst/$playedAgainst)\n" +
-                            "Ecart au score: $averageScoreDifferenceAgainst\n" +
-                            "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningAgainst\n" +
-                            "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingAgainst\n\n"
-                )
+                "Moyennes de la compo $agentsSearch dans les parties de $player:\n\n" +
+                        "Au global:\n" +
+                        "Winrate: $winrate% ($totalWins/$totalPlayed)\n" +
+                        "Ecart au score: $averageScoreDifference\n" +
+                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinning\n" +
+                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosing\n\n" +
+                        "Avec cette compo:\n" +
+                        "Winrate: $winrateWith% ($wonWith/$playedWith)\n" +
+                        "Ecart au score: $averageScoreDifferenceWith\n" +
+                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningWith\n" +
+                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingWith\n\n" +
+                        "Contre cette compo:\n" +
+                        "Winrate: $winrateAgainst% ($wonAgainst/$playedAgainst)\n" +
+                        "Ecart au score: $averageScoreDifferenceAgainst\n" +
+                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningAgainst\n" +
+                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingAgainst\n\n"
+            )
 
             return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MATCHES_AGENTS_ANALYSIS, matches))
         } catch (e: Exception) {
@@ -386,7 +418,7 @@ class CaupanharmController(
 
     // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm
     @GetMapping("populateDatabase")
-    fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse{
+    fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse {
         val playerResponse = henrikService.getPlayerFromName(seed).block()!!
         Thread.sleep(2200)
         if (playerResponse.statusCode != 200) return playerResponse
@@ -400,105 +432,129 @@ class CaupanharmController(
     }
 
     // 2s delay after each Henrik request to avoid reaching rate limit
-    fun populateDatabaseRecursive(currentPlayer: String, region: String, queue: String, visitedPlayers: MutableSet<String>, playersToVisit: MutableSet<String>): CaupanharmResponse{
-        try{
-            while(playersToVisit.size > 0){
-                    // Find every match
-                    var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
+    fun populateDatabaseRecursive(
+        currentPlayer: String,
+        region: String,
+        queue: String,
+        visitedPlayers: MutableSet<String>,
+        playersToVisit: MutableSet<String>
+    ): CaupanharmResponse {
+        try {
+            while (playersToVisit.size > 0) {
+                // Find every match
+                var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
+                Thread.sleep(2200)
+                while (firstHistoryResponse.statusCode != 200) {
+                    logger.info("Got ${firstHistoryResponse.statusCode}   ${firstHistoryResponse.body}")
+                    logger.info("Trying again")
+                    firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
                     Thread.sleep(2200)
-                    while(firstHistoryResponse.statusCode != 200) {
-                        logger.info("Got ${firstHistoryResponse.statusCode}   ${firstHistoryResponse.body}")
+                }
+                val firstResponse = firstHistoryResponse.body as RawMatchHistory
+                var foundMatches: MutableList<RawMatch> =
+                    firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronogically ordered
+                // Stops the loop when there is no more matches (each request retrieves up to 20 matches so if there is only 0 to 19 matches we know we reached the end)
+                // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
+                while (firstResponse.total - foundMatches.size != 0 && foundMatches[foundMatches.size - 1].startTime / 1000 > (Instant.now().epochSecond - 5259486)) {
+                    var nextResponse = henrikService.getHistory(
+                        currentPlayer,
+                        region,
+                        queue,
+                        foundMatches.size,
+                        20 + foundMatches.size
+                    ).block()!!
+                    Thread.sleep(2200)
+                    while (nextResponse.statusCode != 200) {
+                        logger.info("Got ${nextResponse.statusCode}   ${nextResponse.body}")
                         logger.info("Trying again")
-                        firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
+                        nextResponse = henrikService.getHistory(
+                            currentPlayer,
+                            region,
+                            queue,
+                            foundMatches.size,
+                            20 + foundMatches.size
+                        ).block()!!
                         Thread.sleep(2200)
                     }
-                    val firstResponse = firstHistoryResponse.body as RawMatchHistory
-                    var foundMatches: MutableList<RawMatch> = firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronogically ordered
-                    // Stops the loop when there is no more matches (each request retrieves up to 20 matches so if there is only 0 to 19 matches we know we reached the end)
-                    // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
-                    while(firstResponse.total - foundMatches.size != 0 && foundMatches[foundMatches.size-1].startTime / 1000 > (Instant.now().epochSecond - 5259486)){
-                        var nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
+                    val responseBody = nextResponse.body as RawMatchHistory
+                    responseBody.history.forEach {
+                        if ((it.startTime / 1000) > Instant.now().epochSecond - 5259486) foundMatches.add(
+                            it
+                        )
+                    }
+
+                }
+                logger.info("Found ${foundMatches.size} corresponding match IDs")
+                // Save every match
+                foundMatches.forEach { match ->
+                    if (matchXSRepository.countByMatchId(match.matchId) == 0) {
+                        var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
                         Thread.sleep(2200)
-                        while(nextResponse.statusCode != 200){
-                            logger.info("Got ${nextResponse.statusCode}   ${nextResponse.body}")
+                        while (fullMatchResponse.statusCode != 200) {
+                            logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
                             logger.info("Trying again")
-                            nextResponse = henrikService.getHistory(currentPlayer, region, queue, foundMatches.size, 20+foundMatches.size).block()!!
+                            fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
                             Thread.sleep(2200)
                         }
-                        val responseBody = nextResponse.body as RawMatchHistory
-                        responseBody.history.forEach { if((it.startTime / 1000) > Instant.now().epochSecond - 5259486) foundMatches.add(it) }
 
-                    }
-                    logger.info("Found ${foundMatches.size} corresponding match IDs")
-                    // Save every match
-                    foundMatches.forEach{ match ->
-                        if(matchXSRepository.countByMatchId(match.matchId) == 0){
-                            var fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                            Thread.sleep(2200)
-                            while(fullMatchResponse.statusCode != 200){
-                                logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
-                                logger.info("Trying again")
-                                fullMatchResponse = henrikService.getMatch(match.matchId, region).block()!!
-                                Thread.sleep(2200)
-                            }
+                        if (fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH) {
+                            val fullMatch = (fullMatchResponse.body as RiotMatchFull).toCaupanharmMatchFull()
+                            val matchXS = fullMatch.toPostgresMatchXS()
+                            val playersXS = fullMatch.toPostgresMatchXSAgents()
 
-                            if(fullMatchResponse.bodyType == CaupanharmResponseType.RAW_MATCH){
-                                val fullMatch = (fullMatchResponse.body as RiotMatchFull).toCaupanharmMatchFull()
-                                val matchXS = fullMatch.toPostgresMatchXS()
-                                val playersXS = fullMatch.toPostgresMatchXSAgents()
+                            matchXSRepository.save(matchXS)
+                            matchXSAgentRepository.saveAll(playersXS)
 
-                                matchXSRepository.save(matchXS)
-                                matchXSAgentRepository.saveAll(playersXS)
-
-                                playersXS.forEach { player ->
-                                    if(!playersToVisit.contains(player.playerId) && !visitedPlayers.contains(player.playerId)){
-                                        playersToVisit.add(player.playerId)
-                                    }
+                            playersXS.forEach { player ->
+                                if (!playersToVisit.contains(player.playerId) && !visitedPlayers.contains(player.playerId)) {
+                                    playersToVisit.add(player.playerId)
                                 }
-                                logger.info("Saved match ${match.matchId} from player $currentPlayer")
-                            }else{
-                                logger.info("Couldn't save match ${match.matchId} from player $currentPlayer")
-                                logger.info("${fullMatchResponse.statusCode}   ${fullMatchResponse.message}")
-                                logger.info(fullMatchResponse.body.toString())
                             }
-                        }else{ // If the match is already saved, get it from the database just to get its players
-                            val savedMatchPlayers: List<String> = matchXSAgentRepository.findPlayerIdByMatchId(match.matchId)
-                            savedMatchPlayers.forEach{ player ->
-                                if(!playersToVisit.contains(player) && !visitedPlayers.contains(player)){
-                                    playersToVisit.add(player)
-                                }
+                            logger.info("Saved match ${match.matchId} from player $currentPlayer")
+                        } else {
+                            logger.info("Couldn't save match ${match.matchId} from player $currentPlayer")
+                            logger.info("${fullMatchResponse.statusCode}   ${fullMatchResponse.message}")
+                            logger.info(fullMatchResponse.body.toString())
+                        }
+                    } else { // If the match is already saved, get it from the database just to get its players
+                        val savedMatchPlayers: List<String> =
+                            matchXSAgentRepository.findPlayerIdByMatchId(match.matchId)
+                        savedMatchPlayers.forEach { player ->
+                            if (!playersToVisit.contains(player) && !visitedPlayers.contains(player)) {
+                                playersToVisit.add(player)
                             }
                         }
                     }
+                }
 
-                    visitedPlayers.add(currentPlayer)
-                    playersToVisit.remove(currentPlayer)
-                    logger.info("Matches saved for player $currentPlayer")
-                    logger.info("${visitedPlayers.size} players done visited")
-                    logger.info("${playersToVisit.size} players left to visit")
+                visitedPlayers.add(currentPlayer)
+                playersToVisit.remove(currentPlayer)
+                logger.info("Matches saved for player $currentPlayer")
+                logger.info("${visitedPlayers.size} players done visited")
+                logger.info("${playersToVisit.size} players left to visit")
 
-                    val nextPlayer = playersToVisit.random()
-                    logger.info("Next player to visit: $nextPlayer")
-                    // Call recursively with a new playerId (chosen randomly to maximize match diversity)
-                    populateDatabaseRecursive(nextPlayer, region, queue, visitedPlayers, playersToVisit)
+                val nextPlayer = playersToVisit.random()
+                logger.info("Next player to visit: $nextPlayer")
+                // Call recursively with a new playerId (chosen randomly to maximize match diversity)
+                populateDatabaseRecursive(nextPlayer, region, queue, visitedPlayers, playersToVisit)
             }
             return CaupanharmResponse(200, "Done.", CaupanharmResponseType.EXCEPTION, "Should never happen, unless...")
-        }catch(e: Exception){
+        } catch (e: Exception) {
             return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.stackTraceToString())
         }
     }
 
     @GetMapping("fixDatabase")
-    fun fixDatabase(){
+    fun fixDatabase() {
         logger.info("Fixing miscalculated ranks")
         var matchesToFix: Queue<PostGresMatchXS> = LinkedList(matchXSRepository.findByMatchRank(-1))
         logger.info("Found ${matchesToFix.size} matches to fix")
-        while(matchesToFix.size > 0){
+        while (matchesToFix.size > 0) {
             var currentDbMatch = matchesToFix.remove()
             var currentDbMatchAgents = matchXSAgentRepository.findPlayersByMatchId(currentDbMatch.matchId)
             var fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
             Thread.sleep(2200)
-            while(fullMatchResponse.statusCode != 200){
+            while (fullMatchResponse.statusCode != 200) {
                 logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
                 logger.info("Trying again")
                 fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
