@@ -86,7 +86,13 @@ class CaupanharmController(
     }
 
     @GetMapping("/matches")
-    fun getRawHistory(@RequestParam username: String, region: String = "eu", queue: String = "competitive", start: Int? = 0, end: Int? = 20): Mono<CaupanharmResponse> {
+    fun getRawHistory(
+        @RequestParam username: String,
+        region: String = "eu",
+        queue: String = "competitive",
+        start: Int? = 0,
+        end: Int? = 20
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawHistory with params: username=$username, region=$region, queue=$queue")
         return henrikService.getPlayerFromName(username)
             .flatMap { playerResponse ->
@@ -175,7 +181,10 @@ class CaupanharmController(
     }
 
     @GetMapping("/match")
-    fun getMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse> {
+    fun getMatch(
+        @RequestParam("id") matchId: String,
+        @RequestParam("queue") region: String = "eu"
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
 
         return henrikService.getMatch(matchId, region)
@@ -191,7 +200,10 @@ class CaupanharmController(
     }
 
     @GetMapping("/matchXS")
-    fun getMatchXS(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<CaupanharmResponse> {
+    fun getMatchXS(
+        @RequestParam("id") matchId: String,
+        @RequestParam("queue") region: String = "eu"
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: matchXS with params: matchId=${matchId}")
 
 
@@ -209,7 +221,10 @@ class CaupanharmController(
     }
 
     @GetMapping("analysis")
-    fun getAnalysedMatch(@RequestParam("player") player: String, @RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
+    fun getAnalysedMatch(
+        @RequestParam("player") player: String,
+        @RequestParam("id") matchId: String
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
         val match = fullMatchRepository.findByMatchId(matchId)
         return if (match != null) {
@@ -279,17 +294,19 @@ class CaupanharmController(
         }
 
         logger.info("Computation finished")
-        return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MATCH_XS_STATS,computedData))
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_XS_STATS, computedData))
     }
 
     @GetMapping("comps")
-    fun getCompsCustom(@RequestParam("map") map: String?,
-                       @RequestParam("agents") agentsParam: String?,
-                       @RequestParam("sort") sortType: String = "bayesian",
-                       @RequestParam("confidence") confidenceParam: Int?,
-                       @RequestParam("minCount") minCount: Int = 0): Mono<CaupanharmResponse> {
+    fun getCompsCustom(
+        @RequestParam("map") map: String?,
+        @RequestParam("agents") agentsParam: String?,
+        @RequestParam("sort") sortType: String = "bayesian",
+        @RequestParam("confidence") confidenceParam: Int?,
+        @RequestParam("minCount") minCount: Int = 0
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, confidence=$confidenceParam, minCount=$minCount")
-        val requestedAgents = agentsParam?.split(',')?: emptyList()
+        val requestedAgents = agentsParam?.split(',') ?: emptyList()
         val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
             .map {
@@ -315,21 +332,21 @@ class CaupanharmController(
 
         // Bayesian average
         val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
-        val confidence = confidenceParam ?: comps.values.sortedBy{it.count}[(comps.values.size * 95.0 / 100).toInt()].count // 3rd quartile
+        val confidence = confidenceParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 95.0 / 100).toInt()].count // 3rd quartile
 
-        var sortedComps = comps.filter{ it.value.count > minCount}.map{ comp ->
+        var sortedComps = comps.filter { it.value.count > minCount }.map { comp ->
             CompStats(
-                comp.key,
-                (comp.value.wins.toDouble() + confidence * globalWinrate) / (comp.value.count + confidence), // Simplified formula
-                comp.value.count,
-                comp.value.count / (totalMatchesSaved * 2.0),
-                comp.value.count.toDouble() / comps.values.sumOf { it.count },
-                comp.value.wins.toDouble()/comp.value.count
+                comp = comp.key,
+                bayesianAverage = (comp.value.wins.toDouble() + confidence * globalWinrate) / (comp.value.count + confidence), // Simplified formula
+                count = comp.value.count,
+                pickRateInAllGames = comp.value.count / (totalMatchesSaved * 2.0),
+                pickRateInMatchingComps = comp.value.count.toDouble() / comps.values.sumOf { it.count },
+                winRate = comp.value.wins.toDouble() / comp.value.count
             )
         }
 
 
-        sortedComps = when(sortType){
+        sortedComps = when (sortType) {
             "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.count }.thenByDescending { it.bayesianAverage })
             "winrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.winRate }.thenByDescending { it.bayesianAverage })
             "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.count })
@@ -337,16 +354,24 @@ class CaupanharmController(
         }
 
         val compStatsResponse = CompStatsResponse(
-            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount),
-            RequestedAgentsStats(matches.size, sortedComps.size, matches.size/ (totalMatchesSaved * 2.0), globalWinrate),
-            sortedComps.take(100)
+            settings = CompStatsSettings(map, requestedAgents, sortType, confidence, minCount),
+            requestedAgentsStats = RequestedAgentsStats(
+                totalCompsFound = matches.size,
+                differentCompsFound = sortedComps.size,
+                pickRateInTeam = matches.size / (totalMatchesSaved * 2.0),
+                winRate = globalWinrate
+            ),
+            matchingComps = sortedComps.take(100)
         )
 
         return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, compStatsResponse))
     }
 
     @GetMapping("teams")
-    fun getTeamsV1(@RequestParam("username") player: String, @RequestParam("agents") agents: String): Mono<CaupanharmResponse> {
+    fun getTeamsV1(
+        @RequestParam("username") player: String,
+        @RequestParam("agents") agents: String
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: teams with params: username=$player, agents=$agents")
         try {
             val rawResults = fullMatchRepository.findTeamsByPlayerName(player)

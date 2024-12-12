@@ -3,21 +3,21 @@ package perso.caupanharm.backend.models.caupanharm.valorant.analysis
 data class CompStatsResponse(
     val settings: CompStatsSettings,
     val requestedAgentsStats: RequestedAgentsStats,
-    val comps: List<CompStats>
+    val matchingComps: List<CompStats>
 )
 
 data class CompStatsSettings(
     val map: String?,
-    val agents: List<String>,
+    val requestedAgents: List<String>,
     val sortType: String,
     val confidence: Int,
-    val minCount: Int
+    val minGamesToBeCounted: Int
 )
 
 data class RequestedAgentsStats(
     val totalCompsFound: Int,
     val differentCompsFound: Int,
-    val pickRate: Double,
+    val pickRateInTeam: Double,
     val winRate: Double
 )
 
@@ -25,8 +25,8 @@ data class CompStats(
     val comp: List<String>,
     val bayesianAverage: Double,
     val count: Int,
-    val globalPickRate: Double,
-    val localPickRate: Double,
+    val pickRateInAllGames: Double,
+    val pickRateInMatchingComps: Double,
     val winRate: Double
 )
 
