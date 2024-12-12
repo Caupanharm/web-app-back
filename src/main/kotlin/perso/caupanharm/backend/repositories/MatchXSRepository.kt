@@ -20,17 +20,16 @@ interface MatchXSRepository: JpaRepository<PostGresMatchXS, Long> {
     fun findAllMatchIds(): List<String>
 
     @Query("""
-        SELECT
-            COUNT(*) as amount,
-            CAST(SUM(blue_score_def) + SUM(red_score_def) AS FLOAT) / 
+    SELECT
+        COUNT(*) AS count,
+        CAST(SUM(blue_score_def) + SUM(red_score_def) AS FLOAT) / 
             (CAST(SUM(blue_score_def + red_score_atk) + SUM(red_score_def + blue_score_atk) AS FLOAT)) * 100 AS defense_winrate,
-            CAST(SUM(blue_score_atk) + SUM(red_score_atk) AS FLOAT) / 
+        CAST(SUM(blue_score_atk) + SUM(red_score_atk) AS FLOAT) / 
             (CAST(SUM(blue_score_atk + red_score_atk) + SUM(blue_score_def + red_score_def) AS FLOAT)) * 100 AS attack_winrate
-        FROM matches_xs m
-        WHERE (:map IS NULL OR m.map = :map)
-
-    """, nativeQuery = true)
-    fun getMapRates(@Param("map") map: String?): Map<String, Any>
+    FROM matches_xs m
+    WHERE (:maps IS NULL OR m.map IN :maps)
+""", nativeQuery = true)
+    fun getMapRates(@Param("maps") maps: List<String>?): Map<String, Any>
 
 
 }

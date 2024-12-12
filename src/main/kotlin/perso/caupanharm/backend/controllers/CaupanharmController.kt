@@ -225,14 +225,16 @@ class CaupanharmController(
     fun getMapsStats(): Any {
         logger.info("Endpoint fetched: mapsStats")
         val computedData = mutableListOf<MapStats>()
-        val allMaps = matchXSRepository.getMapRates(null)
+        val allMaps = matchXSRepository.getMapRates(mapPool)
         val allAgents = mutableListOf<MapStatsAgents>()
         Agents.entries.forEach { agent ->
             val agentData = matchXSAgentRepository.getMapAgentWinrate(null, agent.displayName)
             allAgents.add(
                 MapStatsAgents(
                     name = agent.displayName,
-                    occurences = agentData["total_matches"] as Long,
+                    count = agentData["count"] as Long,
+                    playRate = agentData["presence_rate"] as Double,
+                    pickRate = agentData["pick_rate"] as Double,
                     winrate = agentData["win_rate"] as Double,
                     atkWinrate = agentData["attack_win_rate"] as Double,
                     defWinrate = agentData["defense_win_rate"] as Double
@@ -241,8 +243,8 @@ class CaupanharmController(
         }
         val allMapsStats = MapStats(
             name = "Total",
-            games = allMaps["amount"] as Long,
-            pickRate = 1.0,
+            count = allMaps["count"] as Long,
+            playRate = 1.0,
             atkWinrate = allMaps["attack_winrate"] as Double,
             defWinrate = allMaps["defense_winrate"] as Double,
             topAgents = allAgents.sortedByDescending { it.winrate }
@@ -250,14 +252,16 @@ class CaupanharmController(
         computedData.add(allMapsStats)
 
         mapPool.forEach { map ->
-            val currentMap = matchXSRepository.getMapRates(map)
+            val currentMap = matchXSRepository.getMapRates(listOf(map))
             val currentAgents = mutableListOf<MapStatsAgents>()
             Agents.entries.forEach { agent ->
                 val agentData = matchXSAgentRepository.getMapAgentWinrate(map, agent.displayName)
                 currentAgents.add(
                     MapStatsAgents(
                         name = agent.displayName,
-                        occurences = agentData["total_matches"] as Long,
+                        count = agentData["count"] as Long,
+                        playRate = agentData["presence_rate"] as Double,
+                        pickRate = agentData["pick_rate"] as Double,
                         winrate = agentData["win_rate"] as Double,
                         atkWinrate = agentData["attack_win_rate"] as Double,
                         defWinrate = agentData["defense_win_rate"] as Double
@@ -266,8 +270,8 @@ class CaupanharmController(
             }
             val currentMapStats = MapStats(
                 name = map,
-                games = currentMap["amount"] as Long,
-                pickRate = (currentMap["amount"] as Long).toDouble() / allMapsStats.pickRate,
+                count = currentMap["count"] as Long,
+                playRate = (currentMap["count"] as Long).toDouble() / allMapsStats.count,
                 atkWinrate = currentMap["attack_winrate"] as Double,
                 defWinrate = currentMap["defense_winrate"] as Double,
                 topAgents = currentAgents.sortedByDescending { it.winrate }
