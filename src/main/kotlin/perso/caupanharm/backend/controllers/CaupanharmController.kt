@@ -302,10 +302,9 @@ class CaupanharmController(
         @RequestParam("map") map: String?,
         @RequestParam("agents") agentsParam: String?,
         @RequestParam("sort") sortType: String = "bayesian",
-        @RequestParam("confidence") confidenceParam: Int?,
-        @RequestParam("minCount") minCount: Int = 0
+        @RequestParam("minCount") minCountParam: Int?
     ): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, confidence=$confidenceParam, minCount=$minCount")
+        logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, minCount=$minCountParam")
         val requestedAgents = agentsParam?.split(',') ?: emptyList()
         val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
@@ -332,13 +331,14 @@ class CaupanharmController(
 
         // Bayesian average
         val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
-        val confidence = confidenceParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 95.0 / 100).toInt()].count // 3rd quartile
+        val confidence = minCountParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
 
-        var sortedComps = comps.filter { it.value.count > minCount }.map { comp ->
+        val minCount = minCountParam ?: 0
+        var sortedComps = comps.filter{it.value.count > minCount}.map { comp ->
             CompStats(
                 comp = comp.key,
                 bayesianAverage = (comp.value.wins.toDouble() + confidence * globalWinrate) / (comp.value.count + confidence), // Simplified formula
-                count = comp.value.count,
+                timesPlayed = comp.value.count,
                 pickRateInAllGames = comp.value.count / (totalMatchesSaved * 2.0),
                 pickRateInMatchingComps = comp.value.count.toDouble() / comps.values.sumOf { it.count },
                 winRate = comp.value.wins.toDouble() / comp.value.count
@@ -347,17 +347,17 @@ class CaupanharmController(
 
 
         sortedComps = when (sortType) {
-            "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.count }.thenByDescending { it.bayesianAverage })
+            "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.timesPlayed }.thenByDescending { it.bayesianAverage })
             "winrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.winRate }.thenByDescending { it.bayesianAverage })
             "pickrate" ->  sortedComps.sortedWith(compareByDescending<CompStats> { it.pickRateInAllGames }.thenByDescending { it.bayesianAverage })
-            "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.count })
+            "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.timesPlayed })
             else -> sortedComps
         }
 
         val compStatsResponse = CompStatsResponse(
             settings = CompStatsSettings(map, requestedAgents, sortType, confidence, minCount),
             requestedAgentsStats = RequestedAgentsStats(
-                totalCompsFound = matches.size,
+                timesPlayed = matches.size,
                 differentCompsFound = sortedComps.size,
                 pickRateInTeam = matches.size / (totalMatchesSaved * 2.0),
                 winRate = globalWinrate

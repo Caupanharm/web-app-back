@@ -34,5 +34,4 @@ interface MatchXSRepository: JpaRepository<PostGresMatchXS, Long> {
 """, nativeQuery = true)
     fun getMapRates(@Param("maps") maps: List<String>?): Map<String, Any>
 
-
 }

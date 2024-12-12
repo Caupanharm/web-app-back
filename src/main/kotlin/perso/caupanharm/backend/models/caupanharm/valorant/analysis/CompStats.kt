@@ -15,7 +15,7 @@ data class CompStatsSettings(
 )
 
 data class RequestedAgentsStats(
-    val totalCompsFound: Int,
+    val timesPlayed: Int,
     val differentCompsFound: Int,
     val pickRateInTeam: Double,
     val winRate: Double
@@ -24,7 +24,7 @@ data class RequestedAgentsStats(
 data class CompStats(
     val comp: List<String>,
     val bayesianAverage: Double,
-    val count: Int,
+    val timesPlayed: Int,
     val pickRateInAllGames: Double,
     val pickRateInMatchingComps: Double,
     val winRate: Double
