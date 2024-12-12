@@ -290,6 +290,7 @@ class CaupanharmController(
                        @RequestParam("minCount") minCount: Int = 0): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, confidence=$confidenceParam, minCount=$minCount")
         val requestedAgents = agentsParam?.split(',')?: emptyList()
+        val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
             .map {
                 PostGresCompQuery(
@@ -313,15 +314,17 @@ class CaupanharmController(
         }
 
         // Bayesian average
-        val globalWinrate = comps.values.sumOf { it.wins } / comps.values.sumOf { it.count }
+        val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
         val confidence = confidenceParam ?: comps.values.sortedBy{it.count}[(comps.values.size * 95.0 / 100).toInt()].count // 3rd quartile
 
-        var sortedComps = comps.filter{ it.value.count > minCount}.map{
+        var sortedComps = comps.filter{ it.value.count > minCount}.map{ comp ->
             CompStats(
-                it.key,
-                (it.value.wins.toDouble() + confidence * globalWinrate) / (it.value.count + confidence), // Simplified formula
-                it.value.count,
-                it.value.wins.toDouble()/it.value.count
+                comp.key,
+                (comp.value.wins.toDouble() + confidence * globalWinrate) / (comp.value.count + confidence), // Simplified formula
+                comp.value.count,
+                comp.value.count / (totalMatchesSaved * 2.0),
+                comp.value.count.toDouble() / comps.values.sumOf { it.count },
+                comp.value.wins.toDouble()/comp.value.count
             )
         }
 
@@ -334,7 +337,8 @@ class CaupanharmController(
         }
 
         val compStatsResponse = CompStatsResponse(
-            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount, matches.size, sortedComps.sumOf { it.count }, sortedComps.size),
+            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount),
+            RequestedAgentsStats(matches.size, sortedComps.size, matches.size/ (totalMatchesSaved * 2.0), globalWinrate),
             sortedComps.take(100)
         )
 

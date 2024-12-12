@@ -7,6 +7,9 @@ import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatc
 
 interface MatchXSRepository: JpaRepository<PostGresMatchXS, Long> {
 
+    @Query("""SELECT COUNT(*) FROM matches_xs""", nativeQuery = true)
+    fun getNumberOfMatches(): Int
+
     @Query("""SELECT COUNT(m) FROM matches_xs m WHERE m.match_id = :uuid""", nativeQuery = true)
     fun countByMatchId(@Param("uuid") uuid: String): Int
 

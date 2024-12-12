@@ -13,7 +13,6 @@ interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
     @Query("""SELECT m.* FROM matches_xs_agents m WHERE m.match_id = :uuid""", nativeQuery = true)
     fun findPlayersByMatchId(@Param("uuid") matchId: String): List<PostGresMatchXSPlayer>
 
-
     @Query("""
     SELECT
     COUNT(*) AS total_matches,
