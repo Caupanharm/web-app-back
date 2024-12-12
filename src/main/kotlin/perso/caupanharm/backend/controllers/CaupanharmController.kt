@@ -286,8 +286,8 @@ class CaupanharmController(
     fun getCompsCustom(@RequestParam("map") map: String?,
                        @RequestParam("agents") agentsParam: String?,
                        @RequestParam("sort") sortType: String = "bayesian",
-                       @RequestParam("confidence") confidenceParam: Long?,
-                       @RequestParam("minCount") minCount: Long = 0): Mono<CaupanharmResponse> {
+                       @RequestParam("confidence") confidenceParam: Int?,
+                       @RequestParam("minCount") minCount: Int = 0): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, confidence=$confidenceParam, minCount=$minCount")
         val requestedAgents = agentsParam?.split(',')?: emptyList()
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
@@ -334,7 +334,7 @@ class CaupanharmController(
         }
 
         val compStatsResponse = CompStatsResponse(
-            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount),
+            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount, matches.size, sortedComps.sumOf { it.count }, sortedComps.size),
             sortedComps.take(100)
         )
 

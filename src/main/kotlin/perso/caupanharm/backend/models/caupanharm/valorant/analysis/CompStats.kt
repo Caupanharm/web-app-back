@@ -9,18 +9,21 @@ data class CompStatsSettings(
     val map: String?,
     val agents: List<String>,
     val sortType: String,
-    val confidence: Long,
-    val minCount: Long
+    val confidence: Int,
+    val minCount: Int,
+    val totalMatches: Int,
+    val totalCompsFound: Int,
+    val differentCompsFound: Int,
 )
 
 data class CompStats(
     val comp: List<String>,
     val bayesianAverage: Double,
-    val count: Long,
+    val count: Int,
     val winRate: Double
 )
 
 data class CompStatsCount(
-    var count: Long,
-    var wins: Long
+    var count: Int,
+    var wins: Int
 )
