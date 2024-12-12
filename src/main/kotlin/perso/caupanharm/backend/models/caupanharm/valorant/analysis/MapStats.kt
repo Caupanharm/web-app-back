@@ -18,3 +18,4 @@ data class MapStatsAgents(
     val atkWinrate: Double,
     val defWinrate: Double
 )
+

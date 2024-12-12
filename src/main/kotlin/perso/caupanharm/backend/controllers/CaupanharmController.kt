@@ -12,8 +12,7 @@ import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
-import perso.caupanharm.backend.models.caupanharm.valorant.analysis.MapStats
-import perso.caupanharm.backend.models.caupanharm.valorant.analysis.MapStatsAgents
+import perso.caupanharm.backend.models.caupanharm.valorant.analysis.*
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresCompQuery
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
@@ -222,7 +221,7 @@ class CaupanharmController(
     }
 
     @GetMapping("mapsStats")
-    fun getMapsStats(): Any {
+    fun getMapsStats(): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: mapsStats")
         val computedData = mutableListOf<MapStats>()
         val allMaps = matchXSRepository.getMapRates(mapPool)
@@ -283,13 +282,15 @@ class CaupanharmController(
         return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MATCH_XS_STATS,computedData))
     }
 
-
-
     @GetMapping("comps")
-    fun getCompsCustom(@RequestParam("map") map: String?, @RequestParam("agents") agentsParam: String?): Any {
-        logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam")
-
-        val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, agentsParam)
+    fun getCompsCustom(@RequestParam("map") map: String?,
+                       @RequestParam("agents") agentsParam: String?,
+                       @RequestParam("sort") sortType: String = "bayesian",
+                       @RequestParam("confidence") confidenceParam: Long?,
+                       @RequestParam("minCount") minCount: Long = 0): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, confidence=$confidenceParam, minCount=$minCount")
+        val requestedAgents = agentsParam?.split(',')?: emptyList()
+        val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
             .map {
                 PostGresCompQuery(
                     map = it["map"] as String,
@@ -301,15 +302,47 @@ class CaupanharmController(
                 )
             }
 
-        return matches
+        val comps = mutableMapOf<List<String>, CompStatsCount>()
 
+        matches.forEach { match ->
+            val compStats = comps.getOrPut(match.teamAgents) {
+                CompStatsCount(0, 0)
+            }
+            compStats.count++
+            if (match.allyScore > match.enemyScore) compStats.wins++
+        }
+
+        // Bayesian average
+        val globalWinrate = comps.values.sumOf { it.wins } / comps.values.sumOf { it.count }
+        val confidence = confidenceParam ?: comps.values.sortedBy{it.count}[(comps.values.size * 95.0 / 100).toInt()].count // 3rd quartile
+
+        var sortedComps = comps.filter{ it.value.count > minCount}.map{
+            CompStats(
+                it.key,
+                (it.value.wins.toDouble() + confidence * globalWinrate) / (it.value.count + confidence), // Simplified formula
+                it.value.count,
+                it.value.wins.toDouble()/it.value.count
+            )
+        }
+
+
+        sortedComps = when(sortType){
+            "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.count }.thenByDescending { it.bayesianAverage })
+            "winrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.winRate }.thenByDescending { it.bayesianAverage })
+            "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.count })
+            else -> sortedComps
+        }
+
+        val compStatsResponse = CompStatsResponse(
+            CompStatsSettings(map,requestedAgents,sortType,confidence,minCount),
+            sortedComps.take(100)
+        )
+
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, compStatsResponse))
     }
 
     @GetMapping("teams")
-    fun getTeamsV1(
-        @RequestParam("username") player: String,
-        @RequestParam("agents") agents: String
-    ): Mono<CaupanharmResponse> {
+    fun getTeamsV1(@RequestParam("username") player: String, @RequestParam("agents") agents: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: teams with params: username=$player, agents=$agents")
         try {
             val rawResults = fullMatchRepository.findTeamsByPlayerName(player)
