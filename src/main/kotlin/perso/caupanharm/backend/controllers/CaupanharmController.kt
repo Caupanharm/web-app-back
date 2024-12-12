@@ -349,6 +349,7 @@ class CaupanharmController(
         sortedComps = when (sortType) {
             "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.count }.thenByDescending { it.bayesianAverage })
             "winrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.winRate }.thenByDescending { it.bayesianAverage })
+            "pickrate" ->  sortedComps.sortedWith(compareByDescending<CompStats> { it.pickRateInAllGames }.thenByDescending { it.bayesianAverage })
             "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.count })
             else -> sortedComps
         }
