@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
 
-interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
+interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Int> {
 
     @Query("""SELECT m.player_id FROM matches_xs_agents m WHERE m.match_id = :uuid""", nativeQuery = true)
     fun findPlayerIdByMatchId(@Param("uuid") matchId: String): List<String>
@@ -16,16 +16,16 @@ interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
     @Query("""
     SELECT
     COUNT(*) AS total_matches,
-    COUNT(DISTINCT m.match_id) AS count,
+    COUNT(DISTINCT m.match_id) AS games_played,
     (COUNT(DISTINCT m.match_id)::FLOAT / NULLIF(
-        (SELECT COUNT(*) FROM matches_xs), 0)) * 100 AS presence_rate,
+        (SELECT COUNT(*) FROM matches_xs m WHERE (:map IS NULL OR m.map = :map)), 0)) AS presence_rate,
     (COUNT(*)::FLOAT / NULLIF(
-        (SELECT COUNT(*) * 10 FROM matches_xs), 0)) * 100 AS pick_rate,
+        (SELECT COUNT(*) * 10 FROM matches_xs m WHERE (:map IS NULL OR m.map = :map)), 0)) AS pick_rate,
     (COUNT(CASE 
         WHEN (a.team = 'Blue' AND m.blue_score > m.red_score) OR 
              (a.team = 'Red' AND m.red_score > m.blue_score) 
         THEN 1 
-    END)::FLOAT / NULLIF(COUNT(*), 0)) * 100 AS win_rate,
+    END)::FLOAT / NULLIF(COUNT(*), 0)) AS win_rate,
     CAST(
         SUM(
             CASE 
@@ -43,7 +43,7 @@ interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
                 END
             ) AS FLOAT
         ), 0
-    ) * 100 AS attack_win_rate,
+    ) AS attack_win_rate,
     CAST(
         SUM(
             CASE 
@@ -61,14 +61,13 @@ interface MatchXSAgentRepository: JpaRepository<PostGresMatchXSPlayer, Long> {
                 END
             ) AS FLOAT
         ), 0
-    ) * 100 AS defense_win_rate
+    ) AS defense_win_rate
 FROM matches_xs_agents a
 INNER JOIN matches_xs m ON a.match_id = m.match_id
 WHERE a.agent = :agent AND (:map IS NULL OR m.map = :map)
 GROUP BY a.agent;
     """, nativeQuery = true)
     fun getMapAgentWinrate(@Param("map") map: String?, @Param("agent") agent: String): Map<String,Any>
-
 
     @Query("""
     SELECT

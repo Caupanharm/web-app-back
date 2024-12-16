@@ -236,11 +236,11 @@ data class RiotMatchRoundResult(
     val winningTeam: String,
     val bombPlanter: String?,
     val bombDefuser: String?,
-    val plantRoundTime: Long,
+    val plantRoundTime: Int,
     val plantPlayerLocations: List<RiotPlayerLocation>?,
     val plantLocation: RiotLocation?,
     val plantSite: String?,
-    val defuseRoundTime: Long,
+    val defuseRoundTime: Int,
     val defusePlayerLocations: List<RiotPlayerLocation>?,
     val defuseLocation: RiotLocation?,
     val playerStats: List<RiotRoundPlayerStats>,
@@ -400,8 +400,8 @@ data class RiotRoundPlayerScore(
 )
 
 data class RiotMatchKill(
-    val gameTime: Long,
-    val roundTime: Long,
+    val gameTime: Int,
+    val roundTime: Int,
     val round: Int,
     val killer: String?,
     val victim: String,

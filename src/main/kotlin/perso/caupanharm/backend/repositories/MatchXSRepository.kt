@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 
-interface MatchXSRepository: JpaRepository<PostGresMatchXS, Long> {
+interface MatchXSRepository: JpaRepository<PostGresMatchXS, Int> {
 
     @Query("""SELECT COUNT(*) FROM matches_xs""", nativeQuery = true)
     fun getNumberOfMatches(): Int
@@ -24,11 +24,11 @@ interface MatchXSRepository: JpaRepository<PostGresMatchXS, Long> {
 
     @Query("""
     SELECT
-        COUNT(*) AS count,
+        COUNT(*) AS games_played,
         CAST(SUM(blue_score_def) + SUM(red_score_def) AS FLOAT) / 
-            (CAST(SUM(blue_score_def + red_score_atk) + SUM(red_score_def + blue_score_atk) AS FLOAT)) * 100 AS defense_winrate,
+            (CAST(SUM(blue_score_def + red_score_atk) + SUM(red_score_def + blue_score_atk) AS FLOAT)) AS defense_winrate,
         CAST(SUM(blue_score_atk) + SUM(red_score_atk) AS FLOAT) / 
-            (CAST(SUM(blue_score_atk + red_score_atk) + SUM(blue_score_def + red_score_def) AS FLOAT)) * 100 AS attack_winrate
+            (CAST(SUM(blue_score_atk + red_score_atk) + SUM(blue_score_def + red_score_def) AS FLOAT)) AS attack_winrate
     FROM matches_xs m
     WHERE (:maps IS NULL OR m.map IN :maps)
 """, nativeQuery = true)

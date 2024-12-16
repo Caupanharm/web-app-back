@@ -53,7 +53,7 @@ data class PostGresMatchXS(
 data class PostGresMatchXSPlayer(
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    val id: Long = 0,
+    val id: Int = 0,
 
     @Column(name = "player_id")
     val playerId: String,

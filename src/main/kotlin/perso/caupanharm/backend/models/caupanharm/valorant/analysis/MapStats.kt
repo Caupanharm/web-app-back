@@ -2,7 +2,7 @@ package perso.caupanharm.backend.models.caupanharm.valorant.analysis
 
 data class MapStats(
     val name: String,
-    val count: Long,
+    val count: Int,
     val playRate: Double,
     val atkWinrate: Double,
     val defWinrate: Double,
@@ -11,7 +11,7 @@ data class MapStats(
 
 data class MapStatsAgents(
     val name: String,
-    val count: Long,
+    val count: Int,
     val playRate: Double,
     val pickRate: Double,
     val winrate: Double,

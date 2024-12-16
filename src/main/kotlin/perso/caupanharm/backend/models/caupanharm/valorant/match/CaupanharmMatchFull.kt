@@ -132,7 +132,7 @@ data class CaupanharmMatchRound(
 )
 
 data class BombEvent(
-    val roundTimeMillis: Long,
+    val roundTimeMillis: Int,
     val site: String?,
     val location: Location?,
     val player: String,
@@ -170,8 +170,8 @@ data class DamageEvent(
 
 data class CaupanharmMatchKill(
     val round: Int,
-    val roundTimeMillis: Long,
-    val matchTimeMillis: Long,
+    val roundTimeMillis: Int,
+    val matchTimeMillis: Int,
     val killer: String?,
     val victim: String,
     val assistants: List<String>?,

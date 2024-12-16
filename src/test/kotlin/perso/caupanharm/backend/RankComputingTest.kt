@@ -1,11 +1,9 @@
 package perso.caupanharm.backend
 
-import org.springframework.boot.test.context.SpringBootTest
 import perso.caupanharm.backend.models.caupanharm.valorant.match.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@SpringBootTest
 class RankComputingTest {
     private val placeholderMetadata = CaupanharmMatchMetadata("","",0,0,null,"")
     private val placeholderScore = CaupanharmMatchScore(0,0,0,0,0,0)
