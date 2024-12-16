@@ -1,10 +1,10 @@
 package perso.caupanharm.backend.controllers
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.web.bind.annotation.*
 import perso.caupanharm.backend.repositories.FullMatchRepository
 import perso.caupanharm.backend.services.HenrikService
@@ -13,30 +13,24 @@ import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponseType
 import perso.caupanharm.backend.models.caupanharm.valorant.account.CaupanharmPlayer
 import perso.caupanharm.backend.models.caupanharm.valorant.analysis.*
-import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresCompQuery
-import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
-import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgent
-import perso.caupanharm.backend.models.caupanharm.valorant.database.PostgresMatchAgents
+import perso.caupanharm.backend.models.caupanharm.valorant.database.*
 import perso.caupanharm.backend.models.localdata.AdditionalCustomPlayerData
 import perso.caupanharm.backend.models.localdata.BracketMatchData
 import perso.caupanharm.backend.models.localdata.PlayersMatchData
 import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchFull
-import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchPlayer
-import perso.caupanharm.backend.models.caupanharm.valorant.match.CaupanharmMatchScore
 import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.models.riot.assets.Agents
+import perso.caupanharm.backend.repositories.MapStatsRepository
 import perso.caupanharm.backend.repositories.MatchXSAgentRepository
 import perso.caupanharm.backend.repositories.MatchXSRepository
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
-import java.util.*
 import kotlin.collections.HashSet
-import kotlin.math.abs
 
 val objectMapper = jacksonObjectMapper()
 private val logger = KotlinLogging.logger {}
@@ -58,6 +52,9 @@ class CaupanharmController(
     @Autowired
     lateinit var matchXSAgentRepository: MatchXSAgentRepository
 
+    @Autowired
+    lateinit var mapStatsRepository: MapStatsRepository
+
     @Value("\${valorant.current.maps}")
     lateinit var mapPool: List<String>
 
@@ -73,7 +70,7 @@ class CaupanharmController(
         return localDataService.getPlayersMatchesData()
     }
 
-    @GetMapping("/stats")
+    @GetMapping("/playerStats")
     fun getStats(): List<AdditionalCustomPlayerData> {
         logger.info("Endpoint fetched: stats")
         return localDataService.getAdditionalPlayerData()
@@ -235,66 +232,87 @@ class CaupanharmController(
 
     }
 
-    @GetMapping("mapsStats")
-    fun getMapsStats(): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: mapsStats")
-        val computedData = mutableListOf<MapStats>()
+    @GetMapping("stats")
+    fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: stats") 
+        return Mono.just(
+            CaupanharmResponse(
+                200,
+                null,
+                CaupanharmResponseType.MAPS_STATS,
+                mapStatsRepository.getData()
+            )
+        )
+    }
+
+    @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt for testing in dev env if needed
+    fun saveMapsAgentsStats() {
+        logger.info("Called saveMapsStats")
+        val computedStats = mutableListOf<PostGresMapAgentsStats>()
+
         val allMaps = matchXSRepository.getMapRates(mapPool)
-        val allAgents = mutableListOf<MapStatsAgents>()
-        Agents.entries.forEach { agent ->
-            val agentData = matchXSAgentRepository.getMapAgentWinrate(null, agent.displayName)
-            allAgents.add(
-                MapStatsAgents(
-                    name = agent.displayName,
-                    count = agentData["count"] as Long,
-                    playRate = agentData["presence_rate"] as Double,
-                    pickRate = agentData["pick_rate"] as Double,
-                    winrate = agentData["win_rate"] as Double,
-                    atkWinrate = agentData["attack_win_rate"] as Double,
-                    defWinrate = agentData["defense_win_rate"] as Double
+        val allMapsStats = PostGresMapAgentsStats(
+            map = null,
+            agent = null,
+            gamesPlayed = (allMaps["games_played"] as Long).toInt(),
+            playRate = 1.0,
+            pickRate = null,
+            winRate = null,
+            atkWinRate = allMaps["attack_winrate"] as Double,
+            defWinRate = allMaps["defense_winrate"] as Double
+        )
+        computedStats.add(allMapsStats)
+
+        Agents.entries.forEach { requestedAgent ->
+            val currentAgentAllMaps = matchXSAgentRepository.getMapAgentWinrate(null, requestedAgent.displayName)
+            computedStats.add(
+                PostGresMapAgentsStats(
+                    map = null,
+                    agent = requestedAgent.displayName,
+                    gamesPlayed = (currentAgentAllMaps["games_played"] as Long).toInt(),
+                    playRate = currentAgentAllMaps["presence_rate"] as Double,
+                    pickRate = currentAgentAllMaps["pick_rate"] as Double,
+                    winRate = currentAgentAllMaps["win_rate"] as Double,
+                    atkWinRate = currentAgentAllMaps["attack_win_rate"] as Double,
+                    defWinRate = currentAgentAllMaps["defense_win_rate"] as Double
                 )
             )
         }
-        val allMapsStats = MapStats(
-            name = "Total",
-            count = allMaps["count"] as Long,
-            playRate = 1.0,
-            atkWinrate = allMaps["attack_winrate"] as Double,
-            defWinrate = allMaps["defense_winrate"] as Double,
-            topAgents = allAgents.sortedByDescending { it.winrate }
-        )
-        computedData.add(allMapsStats)
 
-        mapPool.forEach { map ->
-            val currentMap = matchXSRepository.getMapRates(listOf(map))
-            val currentAgents = mutableListOf<MapStatsAgents>()
-            Agents.entries.forEach { agent ->
-                val agentData = matchXSAgentRepository.getMapAgentWinrate(map, agent.displayName)
-                currentAgents.add(
-                    MapStatsAgents(
-                        name = agent.displayName,
-                        count = agentData["count"] as Long,
-                        playRate = agentData["presence_rate"] as Double,
-                        pickRate = agentData["pick_rate"] as Double,
-                        winrate = agentData["win_rate"] as Double,
-                        atkWinrate = agentData["attack_win_rate"] as Double,
-                        defWinrate = agentData["defense_win_rate"] as Double
+        mapPool.forEach { requestedMap ->
+            val currentMap = matchXSRepository.getMapRates(listOf(requestedMap))
+            val currentMapStats = PostGresMapAgentsStats(
+                map = requestedMap,
+                agent = null,
+                gamesPlayed = (currentMap["games_played"] as Long).toInt(),
+                playRate = (currentMap["games_played"] as Long).toDouble() / allMapsStats.gamesPlayed,
+                pickRate = null,
+                winRate = null,
+                atkWinRate = currentMap["attack_winrate"] as Double,
+                defWinRate = currentMap["defense_winrate"] as Double
+            )
+            computedStats.add(currentMapStats)
+
+            Agents.entries.forEach { requestedAgent ->
+                val currentAgent = matchXSAgentRepository.getMapAgentWinrate(requestedMap, requestedAgent.displayName)
+                computedStats.add(
+                    PostGresMapAgentsStats(
+                        map = requestedMap,
+                        agent = requestedAgent.displayName,
+                        gamesPlayed = (currentAgent["games_played"] as Long).toInt(),
+                        playRate = currentAgent["presence_rate"] as Double,
+                        pickRate = currentAgent["pick_rate"] as Double,
+                        winRate = currentAgent["win_rate"] as Double,
+                        atkWinRate = currentAgent["attack_win_rate"] as Double,
+                        defWinRate = currentAgent["defense_win_rate"] as Double
                     )
                 )
             }
-            val currentMapStats = MapStats(
-                name = map,
-                count = currentMap["count"] as Long,
-                playRate = (currentMap["count"] as Long).toDouble() / allMapsStats.count,
-                atkWinrate = currentMap["attack_winrate"] as Double,
-                defWinrate = currentMap["defense_winrate"] as Double,
-                topAgents = currentAgents.sortedByDescending { it.winrate }
-            )
-            computedData.add(currentMapStats)
         }
 
-        logger.info("Computation finished")
-        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_XS_STATS, computedData))
+        mapStatsRepository.deleteAll()
+        mapStatsRepository.saveAll(computedStats)
+        logger.info("Maps stats updated")
     }
 
     @GetMapping("comps")
@@ -331,10 +349,11 @@ class CaupanharmController(
 
         // Bayesian average
         val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
-        val confidence = minCountParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
+        val confidence = minCountParam
+            ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
 
         val minCount = minCountParam ?: 0
-        var sortedComps = comps.filter{it.value.count > minCount}.map { comp ->
+        var sortedComps = comps.filter { it.value.count > minCount }.map { comp ->
             CompStats(
                 comp = comp.key,
                 bayesianAverage = (comp.value.wins.toDouble() + confidence * globalWinrate) / (comp.value.count + confidence), // Simplified formula
@@ -349,7 +368,7 @@ class CaupanharmController(
         sortedComps = when (sortType) {
             "count" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.timesPlayed }.thenByDescending { it.bayesianAverage })
             "winrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.winRate }.thenByDescending { it.bayesianAverage })
-            "pickrate" ->  sortedComps.sortedWith(compareByDescending<CompStats> { it.pickRateInAllGames }.thenByDescending { it.bayesianAverage })
+            "pickrate" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.pickRateInAllGames }.thenByDescending { it.bayesianAverage })
             "bayesian" -> sortedComps.sortedWith(compareByDescending<CompStats> { it.bayesianAverage }.thenByDescending { it.timesPlayed })
             else -> sortedComps
         }
@@ -366,161 +385,6 @@ class CaupanharmController(
         )
 
         return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, compStatsResponse))
-    }
-
-    @GetMapping("teams")
-    fun getTeamsV1(
-        @RequestParam("username") player: String,
-        @RequestParam("agents") agents: String
-    ): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: teams with params: username=$player, agents=$agents")
-        try {
-            val rawResults = fullMatchRepository.findTeamsByPlayerName(player)
-            if (rawResults.isEmpty()) return Mono.just(
-                CaupanharmResponse(
-                    500,
-                    "No matches found for player $player",
-                    CaupanharmResponseType.EXCEPTION,
-                    null
-                )
-            )
-
-            val matches = rawResults.map { result ->
-                val players: List<CaupanharmMatchPlayer> = objectMapper.readValue(result["players"] as String)
-                val score: CaupanharmMatchScore = objectMapper.readValue(result["score"] as String)
-
-                val foundPlayer = players.find { it.name.equals(player, ignoreCase = true) }
-                val playerTeam = foundPlayer!!.team // null safe, checked at rawResults.isEmpty()
-                PostgresMatchAgents(
-                    playerTeam = playerTeam,
-                    agents = players.map { PostgresMatchAgent(it.agent, it.team) },
-                    score = score
-                )
-            }
-
-            var totalPlayed = 0
-            var totalWins = 0
-            var totalLosses = 0
-            var globalScoreDifference = 0
-            var globalScoreDifferenceWhenWinning = 0
-            var globalScoreDifferenceWhenLosing = 0
-
-            var playedWith = 0
-            var wonWith = 0
-            var lostWith = 0
-            var scoreDifferenceWhenWinningWith = 0
-            var scoreDifferenceWhenLosingWith = 0
-
-            var playedAgainst = 0
-            var lostAgainst = 0
-            var wonAgainst = 0
-            var scoreDifferenceWhenLosingAgainst = 0
-            var scoreDifferenceWhenWinningAgainst = 0
-
-            val agentsSearch: List<String> = agents.split(',')
-
-            matches.forEach { match ->
-                // Grouper les agents par équipe
-                val agentsByTeam = match.agents.groupBy { it.team }
-
-                // Trouver toutes les équipes qui contiennent tous les agents recherchés (permet de prendre en compte le cas où les agents sont dans les deux équipes)
-                val matchingTeams = agentsByTeam.filter { (_, agents) ->
-                    agentsSearch.all { agent -> agent in agents.map { it.agent } }
-                }
-
-                // Pour chaque équipe trouvée
-                matchingTeams.forEach { (foundTeam, _) ->
-                    totalPlayed++
-                    if (foundTeam == match.playerTeam) playedWith++ else playedAgainst++
-
-                    // Déterminer l'équipe gagnante
-                    val winningTeam = when {
-                        match.score.blue > match.score.red -> "Blue"
-                        match.score.red > match.score.blue -> "Red"
-                        else -> null // Égalité
-                    }
-
-                    val matchRoundsDifference = abs(match.score.blue - match.score.red)
-                    if (foundTeam == winningTeam) {
-                        totalWins++
-                        globalScoreDifference += matchRoundsDifference
-                        globalScoreDifferenceWhenWinning += matchRoundsDifference
-
-                        if (foundTeam == match.playerTeam) {
-                            wonWith++
-                            scoreDifferenceWhenWinningWith += matchRoundsDifference
-                        } else {
-                            lostAgainst++
-                            scoreDifferenceWhenLosingAgainst += matchRoundsDifference
-                        }
-
-
-                    } else if (winningTeam != null) { // Si l'équipe a perdu (pas d'égalité)
-                        totalLosses++
-                        globalScoreDifference -= matchRoundsDifference
-                        globalScoreDifferenceWhenLosing += matchRoundsDifference
-
-                        if (foundTeam == match.playerTeam) {
-                            lostWith++
-                            scoreDifferenceWhenLosingWith += matchRoundsDifference
-                        } else {
-                            wonAgainst++
-                            scoreDifferenceWhenWinningAgainst += matchRoundsDifference
-
-                        }
-
-
-                    }
-                }
-            }
-
-            var winrate = if (totalPlayed == 0) null else totalWins.toDouble() / totalPlayed * 100
-            var averageScoreDifference = if (totalPlayed == 0) null else globalScoreDifference.toDouble() / totalPlayed
-            var averageScoreDifferenceWhenWinning =
-                if (totalWins == 0) null else globalScoreDifferenceWhenWinning.toDouble() / totalWins
-            var averageScoreDifferenceWhenLosing =
-                if (totalLosses == 0) null else globalScoreDifferenceWhenLosing.toDouble() / totalLosses
-
-            var winrateWith = if (playedWith == 0) null else wonWith.toDouble() / playedWith * 100
-            var averageScoreDifferenceWith =
-                if (playedWith == 0) null else (scoreDifferenceWhenWinningWith - scoreDifferenceWhenLosingWith).toDouble() / playedWith
-            var averageScoreDifferenceWhenWinningWith =
-                if (playedWith == 0) null else scoreDifferenceWhenWinningWith.toDouble() / wonWith
-            var averageScoreDifferenceWhenLosingWith =
-                if (playedWith == 0) null else scoreDifferenceWhenLosingWith.toDouble() / lostWith
-
-            var winrateAgainst = if (playedAgainst == 0) null else wonAgainst.toDouble() / playedAgainst * 100
-            var averageScoreDifferenceAgainst =
-                if (playedAgainst == 0) null else (scoreDifferenceWhenWinningAgainst - scoreDifferenceWhenLosingAgainst).toDouble() / playedAgainst
-            var averageScoreDifferenceWhenWinningAgainst =
-                if (playedAgainst == 0) null else scoreDifferenceWhenWinningAgainst.toDouble() / wonAgainst
-            var averageScoreDifferenceWhenLosingAgainst =
-                if (playedAgainst == 0) null else scoreDifferenceWhenLosingAgainst.toDouble() / lostAgainst
-
-            println(
-                "Moyennes de la compo $agentsSearch dans les parties de $player:\n\n" +
-                        "Au global:\n" +
-                        "Winrate: $winrate% ($totalWins/$totalPlayed)\n" +
-                        "Ecart au score: $averageScoreDifference\n" +
-                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinning\n" +
-                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosing\n\n" +
-                        "Avec cette compo:\n" +
-                        "Winrate: $winrateWith% ($wonWith/$playedWith)\n" +
-                        "Ecart au score: $averageScoreDifferenceWith\n" +
-                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningWith\n" +
-                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingWith\n\n" +
-                        "Contre cette compo:\n" +
-                        "Winrate: $winrateAgainst% ($wonAgainst/$playedAgainst)\n" +
-                        "Ecart au score: $averageScoreDifferenceAgainst\n" +
-                        "Ecart au score en cas de victoire: $averageScoreDifferenceWhenWinningAgainst\n" +
-                        "Ecart au score en cas de défaite: $averageScoreDifferenceWhenLosingAgainst\n\n"
-            )
-
-            return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MATCHES_AGENTS_ANALYSIS, matches))
-        } catch (e: Exception) {
-            logger.error(e.stackTraceToString())
-            return Mono.just(CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString()))
-        }
     }
 
     // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm
@@ -651,31 +515,5 @@ class CaupanharmController(
         }
     }
 
-    @GetMapping("fixDatabase")
-    fun fixDatabase() {
-        logger.info("Fixing miscalculated ranks")
-        var matchesToFix: Queue<PostGresMatchXS> = LinkedList(matchXSRepository.findByMatchRank(-1))
-        logger.info("Found ${matchesToFix.size} matches to fix")
-        while (matchesToFix.size > 0) {
-            var currentDbMatch = matchesToFix.remove()
-            var currentDbMatchAgents = matchXSAgentRepository.findPlayersByMatchId(currentDbMatch.matchId)
-            var fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
-            Thread.sleep(2200)
-            while (fullMatchResponse.statusCode != 200) {
-                logger.info("Got ${fullMatchResponse.statusCode}   ${fullMatchResponse.body}")
-                logger.info("Trying again")
-                fullMatchResponse = henrikService.getMatch(currentDbMatch.matchId).block()!!
-                Thread.sleep(2200)
-            }
-            val fullMatch = (fullMatchResponse.body as RiotMatchFull).toCaupanharmMatchFull()
-            val matchXS = fullMatch.toPostgresMatchXS()
-            val playersXS = fullMatch.toPostgresMatchXSAgents()
-
-            //matchXSRepository.save(matchXS)
-            //matchXSAgentRepository.saveAll(playersXS)
-            logger.info("${matchesToFix.size} matches left to fix")
-        }
-
-    }
 
 }
