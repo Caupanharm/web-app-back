@@ -13,7 +13,7 @@ data class RawMatchHistory(
 
 data class RawMatch(
     @JsonProperty("MatchID") val matchId: String,
-    @JsonProperty("GameStartTime") val startTime: Int,
+    @JsonProperty("GameStartTime") val startTime: Long,
     @JsonProperty("QueueID") val queue: String // todo: replace this by an enum listing all possible queues
 )
 

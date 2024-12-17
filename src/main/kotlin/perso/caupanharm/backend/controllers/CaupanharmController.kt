@@ -445,7 +445,7 @@ class CaupanharmController(
                 }
                 val firstResponse = firstHistoryResponse.body as RawMatchHistory
                 var foundMatches: MutableList<RawMatch> =
-                    firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronogically ordered
+                    firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronologically ordered
                 // Stops the loop when there is no more matches (each request retrieves up to 20 matches so if there is only 0 to 19 matches we know we reached the end)
                 // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
                 while (firstResponse.total - foundMatches.size != 0 && foundMatches[foundMatches.size - 1].startTime / 1000 > (Instant.now().epochSecond - 5259486)) {
