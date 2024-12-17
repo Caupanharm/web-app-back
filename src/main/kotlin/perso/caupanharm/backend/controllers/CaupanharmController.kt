@@ -234,15 +234,37 @@ class CaupanharmController(
 
     @GetMapping("stats")
     fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: stats") 
-        return Mono.just(
-            CaupanharmResponse(
-                200,
-                null,
-                CaupanharmResponseType.MAPS_STATS,
-                mapStatsRepository.getData()
+        logger.info("Endpoint fetched: stats")
+        val data = mapStatsRepository.getData()
+        val formattedData = mutableListOf<MapStats>()
+
+        // Global data (no specific agent)
+        val allMapsStats = data.first { it.map == null }
+        formattedData.add(MapStats(null, allMapsStats.gamesPlayed, playRate = null, allMapsStats.atkWinRate, allMapsStats.defWinRate, mutableListOf()))
+
+        // Single map data (no specific agent)
+        mapPool.forEach { map ->
+            val mapStats = data.first { it.map == map && it.agent == null }
+            formattedData.add(MapStats(map, mapStats.gamesPlayed, mapStats.playRate, mapStats.atkWinRate, mapStats.defWinRate, mutableListOf()))
+        }
+
+        // Global data (by agent)
+        data.filter{row -> row.map == null && row.agent != null}.forEach { row ->
+            formattedData.first{ it.name == null }.topAgents.add(
+                MapStatsAgents(row.agent!!, row.gamesPlayed, row.playRate, row.pickRate!!, row.winRate!!, row.atkWinRate, row.defWinRate)
             )
-        )
+        }
+
+        // Single map data (by agent)
+        data.filter{row -> row.map != null && row.agent != null}.forEach { row ->
+            formattedData.first{ it.name == row.map }.topAgents.add(
+                MapStatsAgents(row.agent!!, row.gamesPlayed, row.playRate, row.pickRate!!, row.winRate!!, row.atkWinRate, row.defWinRate)
+            )
+        }
+
+        formattedData.forEach{ map -> map.topAgents.sortByDescending { it.winrate } }
+
+        return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MAPS_STATS,formattedData))
     }
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt for testing in dev env if needed
