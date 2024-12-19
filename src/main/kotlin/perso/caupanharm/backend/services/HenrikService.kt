@@ -124,7 +124,7 @@ class HenrikService(private val henrikClient: WebClient) {
         }
     }
 
-    fun getRawMatch(uuid: String, region: String): Mono<String> {
+    fun getRawMatch(uuid: String, region: String): Mono<CaupanharmResponse> {
         val bodyMap: Map<String, String> = mapOf(
             Pair("type", "matchdetails"),
             Pair("value", uuid),
@@ -132,14 +132,13 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("queries", "")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
-        val caupanharmResponse = henrikClient.post()
+        return henrikClient.post()
             .uri("https://api.henrikdev.xyz/valorant/v1/raw")
             .body(BodyInserters.fromValue(bodyMap))
             .exchangeToMono { response ->
-                response.bodyToMono(String::class.java)
+                Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.RAW_MATCH,response.bodyToMono(String::class.java)))
+
             }
-        //logger.info("Returning $caupanharmResponse")
-        return caupanharmResponse
     }
 
 
