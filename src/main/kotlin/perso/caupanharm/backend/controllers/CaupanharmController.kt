@@ -23,6 +23,7 @@ import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMat
 import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.models.riot.assets.Agents
+import perso.caupanharm.backend.models.riot.assets.Maps
 import perso.caupanharm.backend.repositories.MapStatsRepository
 import perso.caupanharm.backend.repositories.MatchXSAgentRepository
 import perso.caupanharm.backend.repositories.MatchXSRepository
@@ -40,8 +41,9 @@ private val logger = KotlinLogging.logger {}
 class CaupanharmController(
     private val localDataService: LocalDataService,
     private val henrikService: HenrikService,
-    private val fullMatchTransformer: FullMatchTransformer
-
+    private val fullMatchTransformer: FullMatchTransformer,
+    private val usernameRegex: Regex = "^[^,;*\\-#]+#[^,;*\\-#]+\$".toRegex(),
+    private val alphaNumericalRegex: Regex = "^[a-zA-Z0-9]+$".toRegex()
 ) {
     @Autowired
     lateinit var fullMatchRepository: FullMatchRepository
@@ -58,6 +60,7 @@ class CaupanharmController(
     @Value("\${valorant.current.maps}")
     lateinit var mapPool: List<String>
 
+    // Placeholder data - to delete someday
     @GetMapping("/bracket")
     fun getBracket(): List<BracketMatchData> {
         logger.info("Endpoint fetched: bracket")
@@ -76,10 +79,16 @@ class CaupanharmController(
         return localDataService.getAdditionalPlayerData()
     }
 
+    // Actual data
     @GetMapping("/player")
-    fun getPlayer(@RequestParam username: String): Any {
+    fun getPlayer(@RequestParam username: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: player with params: username=${username}")
-        return henrikService.getPlayerFromName(username)
+        return if(!usernameRegex.matches(username)){
+            Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }else{
+            henrikService.getPlayerFromName(username)
+        }
+
     }
 
     @GetMapping("/matches")
@@ -91,6 +100,10 @@ class CaupanharmController(
         end: Int? = 20
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawHistory with params: username=$username, region=$region, queue=$queue")
+        if(!usernameRegex.matches(username) || !alphaNumericalRegex.matches(region) || !alphaNumericalRegex.matches(queue)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }
+
         return henrikService.getPlayerFromName(username)
             .flatMap { playerResponse ->
                 if (playerResponse.statusCode == 200) {
@@ -172,8 +185,11 @@ class CaupanharmController(
     }
 
     @GetMapping("/rawMatch")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("queue") region: String = "eu"): Mono<String> {
+    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("region") region: String = "eu"): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawMatch with params: matchId=${matchId}")
+        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }
         return henrikService.getRawMatch(matchId, region)
     }
 
@@ -183,7 +199,9 @@ class CaupanharmController(
         @RequestParam("queue") region: String = "eu"
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
-
+        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }
         return henrikService.getMatch(matchId, region)
             .map { response ->
                 if (response.statusCode == 200) {
@@ -202,7 +220,9 @@ class CaupanharmController(
         @RequestParam("queue") region: String = "eu"
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: matchXS with params: matchId=${matchId}")
-
+        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }
 
         return henrikService.getMatch(matchId, region)
             .map { response ->
@@ -223,6 +243,9 @@ class CaupanharmController(
         @RequestParam("id") matchId: String
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
+        if(!alphaNumericalRegex.matches(matchId)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        }
         val match = fullMatchRepository.findByMatchId(matchId)
         return if (match != null) {
             fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
@@ -267,7 +290,7 @@ class CaupanharmController(
         return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MAPS_STATS,formattedData))
     }
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt for testing in dev env if needed
+    @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt cron for testing in dev env if needed
     fun saveMapsAgentsStats() {
         logger.info("Called saveMapsStats")
         val computedStats = mutableListOf<PostGresMapAgentsStats>()
@@ -346,6 +369,18 @@ class CaupanharmController(
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, minCount=$minCountParam")
         val requestedAgents = agentsParam?.split(',') ?: emptyList()
+        if(map != null && Maps.entries.find{it.displayName == map} == null){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "map"))
+        }
+        requestedAgents.forEach { agent ->
+            if(Agents.entries.find{it.displayName == agent} == null){
+                return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "agents"))
+            }
+        }
+        if(!alphaNumericalRegex.matches(sortType)){
+            return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "sortType"))
+        }
+
         val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
             .map {
@@ -371,8 +406,7 @@ class CaupanharmController(
 
         // Bayesian average
         val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
-        val confidence = minCountParam
-            ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
+        val confidence = minCountParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
 
         val minCount = minCountParam ?: 0
         var sortedComps = comps.filter { it.value.count > minCount }.map { comp ->
@@ -412,6 +446,9 @@ class CaupanharmController(
     // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm
     @GetMapping("populateDatabase")
     fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse {
+        if(!usernameRegex.matches(seed)){
+            return CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, "seed")
+        }
         val playerResponse = henrikService.getPlayerFromName(seed).block()!!
         Thread.sleep(2200)
         if (playerResponse.statusCode != 200) return playerResponse
@@ -433,6 +470,9 @@ class CaupanharmController(
         playersToVisit: MutableSet<String>
     ): CaupanharmResponse {
         try {
+            /*if(Instant.now().atZone(ZoneOffset.UTC).hour >= 2 && Instant.now().atZone(ZoneOffset.UTC).minute >= 15){
+                return CaupanharmResponse(200, "Done", CaupanharmResponseType.EXCEPTION, "Populating ended because it is past 22:45 UTC, will restart at 23 UTC.")
+            }*/
             while (playersToVisit.size > 0) {
                 // Find every match
                 var firstHistoryResponse = henrikService.getHistory(currentPlayer, region, queue, 0, 20).block()!!
@@ -531,7 +571,7 @@ class CaupanharmController(
                 // Call recursively with a new playerId (chosen randomly to maximize match diversity)
                 populateDatabaseRecursive(nextPlayer, region, queue, visitedPlayers, playersToVisit)
             }
-            return CaupanharmResponse(200, "Done.", CaupanharmResponseType.EXCEPTION, "Should never happen, unless...")
+            return CaupanharmResponse(200, "Done", CaupanharmResponseType.EXCEPTION, null)
         } catch (e: Exception) {
             return CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.stackTraceToString())
         }
