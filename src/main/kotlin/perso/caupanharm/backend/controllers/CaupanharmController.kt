@@ -360,25 +360,55 @@ class CaupanharmController(
         logger.info("Maps stats updated")
     }
 
+    //@Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris")
+    @GetMapping("devSaveComps") // TODO save results in db so the user can later fetch data without having to compute
+    fun saveTopComps(): Mono<CaupanharmResponse>{
+        var comps: MutableList<CompStatsResponse> = mutableListOf()
+        var mapsIncludingAll: MutableList<String?> = mutableListOf(null)
+        mapPool.forEach { mapsIncludingAll.add(it) }
+
+        for(map in mapsIncludingAll){
+            val currentMapCompsResponse = getCompsCustom(map, null, "bayesian", null)
+            if(currentMapCompsResponse.statusCode == 200) {
+                comps.add(
+                    (currentMapCompsResponse.body as CompStatsResponse)
+                        .copy(matchingComps = currentMapCompsResponse.body.matchingComps.take(100))
+                )
+            }
+        }
+
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, comps))
+    }
+
     @GetMapping("comps")
+    fun getTopComps(
+        @RequestParam("map") map: String?,
+        @RequestParam("agents") agentsParam: String?,
+        @RequestParam("sort") sortType: String = "bayesian",
+        @RequestParam("minCount") minCountParam: Int?
+    ){
+
+    }
+
+    @GetMapping("customComps")
     fun getCompsCustom(
         @RequestParam("map") map: String?,
         @RequestParam("agents") agentsParam: String?,
         @RequestParam("sort") sortType: String = "bayesian",
         @RequestParam("minCount") minCountParam: Int?
-    ): Mono<CaupanharmResponse> {
+    ): CaupanharmResponse {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, minCount=$minCountParam")
         val requestedAgents = agentsParam?.split(',') ?: emptyList()
         if(map != null && Maps.entries.find{it.displayName == map} == null){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "map"))
+            return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "map")
         }
         requestedAgents.forEach { agent ->
             if(Agents.entries.find{it.displayName == agent} == null){
-                return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "agents"))
+                return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "agents")
             }
         }
         if(!alphaNumericalRegex.matches(sortType)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "sortType"))
+            return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "sortType")
         }
 
         val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
@@ -431,6 +461,8 @@ class CaupanharmController(
 
         val compStatsResponse = CompStatsResponse(
             settings = CompStatsSettings(map, requestedAgents, sortType, confidence, minCount),
+            requestedAgents = requestedAgents,
+            requestedMap = map,
             requestedAgentsStats = RequestedAgentsStats(
                 timesPlayed = matches.size,
                 differentCompsFound = sortedComps.size,
@@ -440,7 +472,7 @@ class CaupanharmController(
             matchingComps = sortedComps.take(100)
         )
 
-        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, compStatsResponse))
+        return CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, compStatsResponse)
     }
 
     // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm

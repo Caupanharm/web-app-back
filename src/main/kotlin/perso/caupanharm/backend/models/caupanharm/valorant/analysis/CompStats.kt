@@ -2,6 +2,8 @@ package perso.caupanharm.backend.models.caupanharm.valorant.analysis
 
 data class CompStatsResponse(
     val settings: CompStatsSettings,
+    val requestedAgents: List<String>?,
+    val requestedMap: String?,
     val requestedAgentsStats: RequestedAgentsStats,
     val matchingComps: List<CompStats>
 )
