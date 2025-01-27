@@ -255,7 +255,7 @@ class CaupanharmController(
 
     }
 
-    @GetMapping("agents")
+    @GetMapping("stats/agents")
     fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: stats/agents")
         val data = agentsStatsRepository.getData()
@@ -380,7 +380,7 @@ class CaupanharmController(
         return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, comps))
     }
 
-    @GetMapping("comps")
+    @GetMapping("stats/comps")
     fun getTopComps(
         @RequestParam("map") map: String?,
         @RequestParam("agents") agentsParam: String?,
@@ -390,7 +390,7 @@ class CaupanharmController(
 
     }
 
-    @GetMapping("customComps")
+    @GetMapping("stats/customComps")
     fun getCompsCustom(
         @RequestParam("map") map: String?,
         @RequestParam("agents") agentsParam: String?,
