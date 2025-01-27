@@ -411,7 +411,7 @@ class CaupanharmController(
             return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "sortType")
         }
 
-        val totalMatchesSaved = matchXSRepository.getNumberOfMatches()
+        val totalMatchesSaved = matchXSRepository.getMatchesAmount(map)
         val matches = matchXSAgentRepository.findMatchesWithAgentsAndMap(map, requestedAgents)
             .map {
                 PostGresCompQuery(
