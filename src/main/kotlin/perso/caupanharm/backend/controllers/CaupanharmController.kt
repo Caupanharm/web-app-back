@@ -368,7 +368,7 @@ class CaupanharmController(
         mapPool.forEach { mapsIncludingAll.add(it) }
 
         for(map in mapsIncludingAll){
-            val currentMapCompsResponse = getCompsCustom(map, null, "bayesian", null)
+            val currentMapCompsResponse = getCompsCustom(map, null, "bayesian", 30)
             if(currentMapCompsResponse.statusCode == 200) {
                 comps.add(
                     (currentMapCompsResponse.body as CompStatsResponse)
@@ -461,8 +461,6 @@ class CaupanharmController(
 
         val compStatsResponse = CompStatsResponse(
             settings = CompStatsSettings(map, requestedAgents, sortType, confidence, minCount),
-            requestedAgents = requestedAgents,
-            requestedMap = map,
             requestedAgentsStats = RequestedAgentsStats(
                 timesPlayed = matches.size,
                 differentCompsFound = sortedComps.size,
