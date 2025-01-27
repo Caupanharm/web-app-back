@@ -3,8 +3,8 @@ package perso.caupanharm.backend.models.caupanharm.valorant.database
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "maps_stats")
-data class PostGresMapAgentsStats(
+@Table(name = "agents_stats")
+data class PostGresAgentsStats(
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     val id: Int = 0,

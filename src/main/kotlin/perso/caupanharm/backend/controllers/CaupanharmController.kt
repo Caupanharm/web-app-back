@@ -24,7 +24,7 @@ import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.models.riot.assets.Agents
 import perso.caupanharm.backend.models.riot.assets.Maps
-import perso.caupanharm.backend.repositories.MapStatsRepository
+import perso.caupanharm.backend.repositories.AgentsStatsRepository
 import perso.caupanharm.backend.repositories.MatchXSAgentRepository
 import perso.caupanharm.backend.repositories.MatchXSRepository
 import perso.caupanharm.backend.transformers.FullMatchTransformer
@@ -55,7 +55,7 @@ class CaupanharmController(
     lateinit var matchXSAgentRepository: MatchXSAgentRepository
 
     @Autowired
-    lateinit var mapStatsRepository: MapStatsRepository
+    lateinit var agentsStatsRepository: AgentsStatsRepository
 
     @Value("\${valorant.current.maps}")
     lateinit var mapPool: List<String>
@@ -255,10 +255,10 @@ class CaupanharmController(
 
     }
 
-    @GetMapping("stats")
+    @GetMapping("agents")
     fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: stats")
-        val data = mapStatsRepository.getData()
+        logger.info("Endpoint fetched: stats/agents")
+        val data = agentsStatsRepository.getData()
         val formattedData = mutableListOf<MapStats>()
 
         // Global data (no specific agent)
@@ -293,10 +293,10 @@ class CaupanharmController(
     @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt cron for testing in dev env if needed
     fun saveMapsAgentsStats() {
         logger.info("Called saveMapsStats")
-        val computedStats = mutableListOf<PostGresMapAgentsStats>()
+        val computedStats = mutableListOf<PostGresAgentsStats>()
 
         val allMaps = matchXSRepository.getMapRates(mapPool)
-        val allMapsStats = PostGresMapAgentsStats(
+        val allMapsStats = PostGresAgentsStats(
             map = null,
             agent = null,
             gamesPlayed = (allMaps["games_played"] as Long).toInt(),
@@ -311,7 +311,7 @@ class CaupanharmController(
         Agents.entries.forEach { requestedAgent ->
             val currentAgentAllMaps = matchXSAgentRepository.getMapAgentWinrate(null, requestedAgent.displayName)
             computedStats.add(
-                PostGresMapAgentsStats(
+                PostGresAgentsStats(
                     map = null,
                     agent = requestedAgent.displayName,
                     gamesPlayed = (currentAgentAllMaps["games_played"] as Long).toInt(),
@@ -326,7 +326,7 @@ class CaupanharmController(
 
         mapPool.forEach { requestedMap ->
             val currentMap = matchXSRepository.getMapRates(listOf(requestedMap))
-            val currentMapStats = PostGresMapAgentsStats(
+            val currentMapStats = PostGresAgentsStats(
                 map = requestedMap,
                 agent = null,
                 gamesPlayed = (currentMap["games_played"] as Long).toInt(),
@@ -341,7 +341,7 @@ class CaupanharmController(
             Agents.entries.forEach { requestedAgent ->
                 val currentAgent = matchXSAgentRepository.getMapAgentWinrate(requestedMap, requestedAgent.displayName)
                 computedStats.add(
-                    PostGresMapAgentsStats(
+                    PostGresAgentsStats(
                         map = requestedMap,
                         agent = requestedAgent.displayName,
                         gamesPlayed = (currentAgent["games_played"] as Long).toInt(),
@@ -355,8 +355,8 @@ class CaupanharmController(
             }
         }
 
-        mapStatsRepository.deleteAll()
-        mapStatsRepository.saveAll(computedStats)
+        agentsStatsRepository.deleteAll()
+        agentsStatsRepository.saveAll(computedStats)
         logger.info("Maps stats updated")
     }
 
