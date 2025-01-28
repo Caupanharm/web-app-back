@@ -164,7 +164,6 @@ class HenrikService(private val henrikClient: WebClient) {
                                     CaupanharmResponseType.RAW_MATCH,
                                     match
                                 )
-                                //logger.info("Returning $caupanharmResponse")
                                 caupanharmResponse
                             }
 
@@ -176,14 +175,12 @@ class HenrikService(private val henrikClient: WebClient) {
                                     CaupanharmResponseType.EXCEPTION,
                                     error
                                 )
-                                //logger.info("Returning $caupanharmResponse")
                                 caupanharmResponse
                             }
                     }
                 }
         } catch (e: Exception) {
             val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString())
-            //logger.info("Returning $caupanharmResponse")
             return Mono.just(caupanharmResponse)
         }
     }
