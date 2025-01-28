@@ -2,7 +2,6 @@ package perso.caupanharm.backend.controllers
 
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
 import perso.caupanharm.backend.services.HenrikService
 import perso.caupanharm.backend.services.LocalDataService
@@ -17,7 +16,6 @@ import perso.caupanharm.backend.models.riot.RiotMatchFull
 import perso.caupanharm.backend.models.caupanharm.valorant.matches.CaupanharmMatchHistoryFull
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.repositories.*
-import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -28,7 +26,6 @@ private val logger = KotlinLogging.logger {}
 class CaupanharmController(
     private val localDataService: LocalDataService,
     private val henrikService: HenrikService,
-    private val fullMatchTransformer: FullMatchTransformer,
     private val usernameRegex: Regex = "^[^,;*\\-#]+#[^,;*\\-#]+\$".toRegex(),
     private val alphaNumericalRegex: Regex = "^[a-zA-Z0-9]+$".toRegex()
 ) {
