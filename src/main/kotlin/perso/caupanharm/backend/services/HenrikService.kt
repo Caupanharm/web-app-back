@@ -129,15 +129,16 @@ class HenrikService(private val henrikClient: WebClient) {
             Pair("type", "matchdetails"),
             Pair("value", uuid),
             Pair("region", region),
-            Pair("queries", "")
+            Pair("queries", "string")
         )
         logger.info("POST https://api.henrikdev.xyz/valorant/v1/raw with body: $bodyMap")
         return henrikClient.post()
             .uri("https://api.henrikdev.xyz/valorant/v1/raw")
             .body(BodyInserters.fromValue(bodyMap))
             .exchangeToMono { response ->
-                Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.RAW_MATCH,response.bodyToMono(String::class.java)))
-
+                response.bodyToMono(String::class.java).flatMap { body ->
+                    Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.RAW_MATCH, body))
+                }
             }
     }
 
