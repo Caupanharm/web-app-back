@@ -1,12 +1,12 @@
 package perso.caupanharm.backend.controllers
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import jakarta.persistence.Column
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.web.bind.annotation.*
-import perso.caupanharm.backend.repositories.FullMatchRepository
 import perso.caupanharm.backend.services.HenrikService
 import perso.caupanharm.backend.services.LocalDataService
 import perso.caupanharm.backend.models.caupanharm.CaupanharmResponse
@@ -24,9 +24,7 @@ import perso.caupanharm.backend.models.riot.RawMatch
 import perso.caupanharm.backend.models.riot.RawMatchHistory
 import perso.caupanharm.backend.models.riot.assets.Agents
 import perso.caupanharm.backend.models.riot.assets.Maps
-import perso.caupanharm.backend.repositories.AgentsStatsRepository
-import perso.caupanharm.backend.repositories.MatchXSAgentRepository
-import perso.caupanharm.backend.repositories.MatchXSRepository
+import perso.caupanharm.backend.repositories.*
 import perso.caupanharm.backend.transformers.FullMatchTransformer
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -57,6 +55,9 @@ class CaupanharmController(
     @Autowired
     lateinit var agentsStatsRepository: AgentsStatsRepository
 
+    @Autowired
+    lateinit var compsStatsRepository: CompsStatsRepository
+
     @Value("\${valorant.current.maps}")
     lateinit var mapPool: List<String>
 
@@ -83,9 +84,9 @@ class CaupanharmController(
     @GetMapping("/player")
     fun getPlayer(@RequestParam username: String): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: player with params: username=${username}")
-        return if(!usernameRegex.matches(username)){
-            Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
-        }else{
+        return if (!usernameRegex.matches(username)) {
+            Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
+        } else {
             henrikService.getPlayerFromName(username)
         }
 
@@ -100,8 +101,11 @@ class CaupanharmController(
         end: Int? = 20
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawHistory with params: username=$username, region=$region, queue=$queue")
-        if(!usernameRegex.matches(username) || !alphaNumericalRegex.matches(region) || !alphaNumericalRegex.matches(queue)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        if (!usernameRegex.matches(username) || !alphaNumericalRegex.matches(region) || !alphaNumericalRegex.matches(
+                queue
+            )
+        ) {
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
         }
 
         return henrikService.getPlayerFromName(username)
@@ -185,10 +189,13 @@ class CaupanharmController(
     }
 
     @GetMapping("/rawMatch")
-    fun getRawMatch(@RequestParam("id") matchId: String, @RequestParam("region") region: String = "eu"): Mono<CaupanharmResponse> {
+    fun getRawMatch(
+        @RequestParam("id") matchId: String,
+        @RequestParam("region") region: String = "eu"
+    ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: rawMatch with params: matchId=${matchId}")
-        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        if (!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)) {
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
         }
         return henrikService.getRawMatch(matchId, region)
     }
@@ -199,8 +206,8 @@ class CaupanharmController(
         @RequestParam("queue") region: String = "eu"
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: match with params: matchId=${matchId}")
-        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        if (!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)) {
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
         }
         return henrikService.getMatch(matchId, region)
             .map { response ->
@@ -220,8 +227,8 @@ class CaupanharmController(
         @RequestParam("queue") region: String = "eu"
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: matchXS with params: matchId=${matchId}")
-        if(!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        if (!alphaNumericalRegex.matches(matchId) || !alphaNumericalRegex.matches(region)) {
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
         }
 
         return henrikService.getMatch(matchId, region)
@@ -243,8 +250,8 @@ class CaupanharmController(
         @RequestParam("id") matchId: String
     ): Mono<CaupanharmResponse> {
         logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
-        if(!alphaNumericalRegex.matches(matchId)){
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, null))
+        if (!alphaNumericalRegex.matches(matchId)) {
+            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
         }
         val match = fullMatchRepository.findByMatchId(matchId)
         return if (match != null) {
@@ -263,31 +270,65 @@ class CaupanharmController(
 
         // Global data (no specific agent)
         val allMapsStats = data.first { it.map == null }
-        formattedData.add(MapStats(null, allMapsStats.gamesPlayed, playRate = null, allMapsStats.atkWinRate, allMapsStats.defWinRate, mutableListOf()))
+        formattedData.add(
+            MapStats(
+                null,
+                allMapsStats.gamesPlayed,
+                playRate = null,
+                allMapsStats.atkWinRate,
+                allMapsStats.defWinRate,
+                mutableListOf()
+            )
+        )
 
         // Single map data (no specific agent)
         mapPool.forEach { map ->
             val mapStats = data.first { it.map == map && it.agent == null }
-            formattedData.add(MapStats(map, mapStats.gamesPlayed, mapStats.playRate, mapStats.atkWinRate, mapStats.defWinRate, mutableListOf()))
+            formattedData.add(
+                MapStats(
+                    map,
+                    mapStats.gamesPlayed,
+                    mapStats.playRate,
+                    mapStats.atkWinRate,
+                    mapStats.defWinRate,
+                    mutableListOf()
+                )
+            )
         }
 
         // Global data (by agent)
-        data.filter{row -> row.map == null && row.agent != null}.forEach { row ->
-            formattedData.first{ it.name == null }.topAgents.add(
-                MapStatsAgents(row.agent!!, row.gamesPlayed, row.playRate, row.pickRate!!, row.winRate!!, row.atkWinRate, row.defWinRate)
+        data.filter { row -> row.map == null && row.agent != null }.forEach { row ->
+            formattedData.first { it.name == null }.topAgents.add(
+                MapStatsAgents(
+                    row.agent!!,
+                    row.gamesPlayed,
+                    row.playRate,
+                    row.pickRate!!,
+                    row.winRate!!,
+                    row.atkWinRate,
+                    row.defWinRate
+                )
             )
         }
 
         // Single map data (by agent)
-        data.filter{row -> row.map != null && row.agent != null}.forEach { row ->
-            formattedData.first{ it.name == row.map }.topAgents.add(
-                MapStatsAgents(row.agent!!, row.gamesPlayed, row.playRate, row.pickRate!!, row.winRate!!, row.atkWinRate, row.defWinRate)
+        data.filter { row -> row.map != null && row.agent != null }.forEach { row ->
+            formattedData.first { it.name == row.map }.topAgents.add(
+                MapStatsAgents(
+                    row.agent!!,
+                    row.gamesPlayed,
+                    row.playRate,
+                    row.pickRate!!,
+                    row.winRate!!,
+                    row.atkWinRate,
+                    row.defWinRate
+                )
             )
         }
 
-        formattedData.forEach{ map -> map.topAgents.sortByDescending { it.winrate } }
+        formattedData.forEach { map -> map.topAgents.sortByDescending { it.winrate } }
 
-        return Mono.just(CaupanharmResponse(200,null,CaupanharmResponseType.MAPS_STATS,formattedData))
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MAPS_STATS, formattedData))
     }
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt cron for testing in dev env if needed
@@ -360,24 +401,35 @@ class CaupanharmController(
         logger.info("Maps stats updated")
     }
 
-    //@Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris")
-    @GetMapping("devSaveComps") // TODO save results in db so the user can later fetch data without having to compute
-    fun saveTopComps(): Mono<CaupanharmResponse>{
-        var comps: MutableList<CompStatsResponse> = mutableListOf()
+    @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris")
+    fun saveTopComps() {
+        var computedComps: MutableList<PostGresCompsStats> = mutableListOf()
         var mapsIncludingAll: MutableList<String?> = mutableListOf(null)
         mapPool.forEach { mapsIncludingAll.add(it) }
 
-        for(map in mapsIncludingAll){
-            val currentMapCompsResponse = getCompsCustom(map, null, "bayesian", 30)
-            if(currentMapCompsResponse.statusCode == 200) {
-                comps.add(
-                    (currentMapCompsResponse.body as CompStatsResponse)
-                        .copy(matchingComps = currentMapCompsResponse.body.matchingComps.take(100))
-                )
+        for (map in mapsIncludingAll) {
+            val currentMapCompsResponse = getCompsCustom(map, null, "bayesian", 50)
+            if (currentMapCompsResponse.statusCode == 200) {
+                val currentComps = (currentMapCompsResponse.body as CompStatsResponse).copy(
+                    matchingComps = currentMapCompsResponse.body.matchingComps.take(100)
+                ).matchingComps
+                for(comp in currentComps){
+                    computedComps.add(PostGresCompsStats(
+                    map = map,
+                    composition = comp.comp,
+                    bayesianAverage = comp.bayesianAverage,
+                    gamesPlayed = comp.timesPlayed,
+                    playRate = comp.pickRateInAllGames,
+                    pickRate = comp.pickRateInMatchingComps,
+                    winRate = comp.winRate
+                    ))
+                }
             }
         }
 
-        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMP_STATS, comps))
+        compsStatsRepository.deleteAll()
+        compsStatsRepository.saveAll(computedComps)
+        logger.info("Comps stats updated")
     }
 
     @GetMapping("stats/comps")
@@ -386,7 +438,7 @@ class CaupanharmController(
         @RequestParam("agents") agentsParam: String?,
         @RequestParam("sort") sortType: String = "bayesian",
         @RequestParam("minCount") minCountParam: Int?
-    ){
+    ) {
 
     }
 
@@ -399,16 +451,16 @@ class CaupanharmController(
     ): CaupanharmResponse {
         logger.info("Endpoint fetched: comps with params: map=$map, agents=$agentsParam, sortType=$sortType, minCount=$minCountParam")
         val requestedAgents = agentsParam?.split(',') ?: emptyList()
-        if(map != null && Maps.entries.find{it.displayName == map} == null){
-            return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "map")
+        if (map != null && Maps.entries.find { it.displayName == map } == null) {
+            return CaupanharmResponse(500, "Invalid parameter", CaupanharmResponseType.EXCEPTION, "map")
         }
         requestedAgents.forEach { agent ->
-            if(Agents.entries.find{it.displayName == agent} == null){
-                return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "agents")
+            if (Agents.entries.find { it.displayName == agent } == null) {
+                return CaupanharmResponse(500, "Invalid parameter", CaupanharmResponseType.EXCEPTION, "agents")
             }
         }
-        if(!alphaNumericalRegex.matches(sortType)){
-            return CaupanharmResponse(500, "Invalid parameter",CaupanharmResponseType.EXCEPTION, "sortType")
+        if (!alphaNumericalRegex.matches(sortType)) {
+            return CaupanharmResponse(500, "Invalid parameter", CaupanharmResponseType.EXCEPTION, "sortType")
         }
 
         val totalMatchesSaved = matchXSRepository.getMatchesAmount(map)
@@ -436,7 +488,8 @@ class CaupanharmController(
 
         // Bayesian average
         val globalWinrate = comps.values.sumOf { it.wins }.toDouble() / comps.values.sumOf { it.count }
-        val confidence = minCountParam ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
+        val confidence = minCountParam
+            ?: comps.values.sortedBy { it.count }[(comps.values.size * 75.0 / 100).toInt()].count // 3rd quartile
 
         val minCount = minCountParam ?: 0
         var sortedComps = comps.filter { it.value.count > minCount }.map { comp ->
@@ -476,8 +529,8 @@ class CaupanharmController(
     // Using synchronous calls here as this endpoint should later be integrated to another server and not used as an endpoint in Caupanharm
     @GetMapping("populateDatabase")
     fun populateDatabase(@RequestParam("seed") seed: String): CaupanharmResponse {
-        if(!usernameRegex.matches(seed)){
-            return CaupanharmResponse(500, "Invalid parameters",CaupanharmResponseType.EXCEPTION, "seed")
+        if (!usernameRegex.matches(seed)) {
+            return CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, "seed")
         }
         val playerResponse = henrikService.getPlayerFromName(seed).block()!!
         Thread.sleep(2200)
