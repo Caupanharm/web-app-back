@@ -262,75 +262,6 @@ class CaupanharmController(
 
     }
 
-    @GetMapping("stats/agents")
-    fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: stats/agents")
-        val data = agentsStatsRepository.getData()
-        val formattedData = mutableListOf<MapStats>()
-
-        // Global data (no specific agent)
-        val allMapsStats = data.first { it.map == null }
-        formattedData.add(
-            MapStats(
-                null,
-                allMapsStats.gamesPlayed,
-                playRate = null,
-                allMapsStats.atkWinRate,
-                allMapsStats.defWinRate,
-                mutableListOf()
-            )
-        )
-
-        // Single map data (no specific agent)
-        mapPool.forEach { map ->
-            val mapStats = data.first { it.map == map && it.agent == null }
-            formattedData.add(
-                MapStats(
-                    map,
-                    mapStats.gamesPlayed,
-                    mapStats.playRate,
-                    mapStats.atkWinRate,
-                    mapStats.defWinRate,
-                    mutableListOf()
-                )
-            )
-        }
-
-        // Global data (by agent)
-        data.filter { row -> row.map == null && row.agent != null }.forEach { row ->
-            formattedData.first { it.name == null }.topAgents.add(
-                MapStatsAgents(
-                    row.agent!!,
-                    row.gamesPlayed,
-                    row.playRate,
-                    row.pickRate!!,
-                    row.winRate!!,
-                    row.atkWinRate,
-                    row.defWinRate
-                )
-            )
-        }
-
-        // Single map data (by agent)
-        data.filter { row -> row.map != null && row.agent != null }.forEach { row ->
-            formattedData.first { it.name == row.map }.topAgents.add(
-                MapStatsAgents(
-                    row.agent!!,
-                    row.gamesPlayed,
-                    row.playRate,
-                    row.pickRate!!,
-                    row.winRate!!,
-                    row.atkWinRate,
-                    row.defWinRate
-                )
-            )
-        }
-
-        formattedData.forEach { map -> map.topAgents.sortByDescending { it.winrate } }
-
-        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.MAPS_STATS, formattedData))
-    }
-
     @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris") // Adapt cron for testing in dev env if needed
     fun saveMapsAgentsStats() {
         logger.info("Called saveMapsStats")
@@ -403,8 +334,8 @@ class CaupanharmController(
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Europe/Paris")
     fun saveTopComps() {
-        var computedComps: MutableList<PostGresCompsStats> = mutableListOf()
-        var mapsIncludingAll: MutableList<String?> = mutableListOf(null)
+        val computedComps: MutableList<PostGresCompsStats> = mutableListOf()
+        val mapsIncludingAll: MutableList<String?> = mutableListOf(null)
         mapPool.forEach { mapsIncludingAll.add(it) }
 
         for (map in mapsIncludingAll) {
@@ -413,16 +344,18 @@ class CaupanharmController(
                 val currentComps = (currentMapCompsResponse.body as CompStatsResponse).copy(
                     matchingComps = currentMapCompsResponse.body.matchingComps.take(100)
                 ).matchingComps
-                for(comp in currentComps){
-                    computedComps.add(PostGresCompsStats(
-                    map = map,
-                    composition = comp.comp,
-                    bayesianAverage = comp.bayesianAverage,
-                    gamesPlayed = comp.timesPlayed,
-                    playRate = comp.pickRateInAllGames,
-                    pickRate = comp.pickRateInMatchingComps,
-                    winRate = comp.winRate
-                    ))
+                for (comp in currentComps) {
+                    computedComps.add(
+                        PostGresCompsStats(
+                            map = map,
+                            composition = comp.comp,
+                            bayesianAverage = comp.bayesianAverage,
+                            gamesPlayed = comp.timesPlayed,
+                            playRate = comp.pickRateInAllGames,
+                            pickRate = comp.pickRateInMatchingComps,
+                            winRate = comp.winRate
+                        )
+                    )
                 }
             }
         }
@@ -432,14 +365,104 @@ class CaupanharmController(
         logger.info("Comps stats updated")
     }
 
+    @GetMapping("stats/agents")
+    fun getMapsAgentsStats(): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: stats/agents")
+        val data = agentsStatsRepository.getData()
+        val formattedData = mutableListOf<MapStats>()
+
+        // Global data (no specific agent)
+        val allMapsStats = data.first { it.map == null }
+        formattedData.add(
+            MapStats(
+                null,
+                allMapsStats.gamesPlayed,
+                playRate = null,
+                allMapsStats.atkWinRate,
+                allMapsStats.defWinRate,
+                mutableListOf()
+            )
+        )
+
+        // Single map data (no specific agent)
+        mapPool.forEach { map ->
+            val mapStats = data.first { it.map == map && it.agent == null }
+            formattedData.add(
+                MapStats(
+                    map,
+                    mapStats.gamesPlayed,
+                    mapStats.playRate,
+                    mapStats.atkWinRate,
+                    mapStats.defWinRate,
+                    mutableListOf()
+                )
+            )
+        }
+
+        // Global data (by agent)
+        data.filter { row -> row.map == null && row.agent != null }.forEach { row ->
+            formattedData.first { it.name == null }.topAgents.add(
+                MapStatsAgents(
+                    row.agent!!,
+                    row.gamesPlayed,
+                    row.playRate,
+                    row.pickRate!!,
+                    row.winRate!!,
+                    row.atkWinRate,
+                    row.defWinRate
+                )
+            )
+        }
+
+        // Single map data (by agent)
+        data.filter { row -> row.map != null && row.agent != null }.forEach { row ->
+            formattedData.first { it.name == row.map }.topAgents.add(
+                MapStatsAgents(
+                    row.agent!!,
+                    row.gamesPlayed,
+                    row.playRate,
+                    row.pickRate!!,
+                    row.winRate!!,
+                    row.atkWinRate,
+                    row.defWinRate
+                )
+            )
+        }
+
+        formattedData.forEach { map -> map.topAgents.sortByDescending { it.winrate } }
+
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.AGENTS_STATS, formattedData))
+    }
+
     @GetMapping("stats/comps")
     fun getTopComps(
         @RequestParam("map") map: String?,
         @RequestParam("agents") agentsParam: String?,
         @RequestParam("sort") sortType: String = "bayesian",
         @RequestParam("minCount") minCountParam: Int?
-    ) {
+    ): Mono<CaupanharmResponse> {
+        logger.info("Endpoint fetched: stats/comps")
+        val data = compsStatsRepository.getData()
+        val mapsIncludingAll: MutableList<String?> = mutableListOf(null)
+        mapPool.forEach { mapsIncludingAll.add(it) }
 
+        val computedData: MutableMap<String?, List<PostGresCompsStatsComputed>> = mutableMapOf()
+
+        for (map in mapsIncludingAll) {
+            val comps = data.filter { it.map == map }.sortedByDescending { it.bayesianAverage }.map {
+                PostGresCompsStatsComputed(
+                    composition = it.composition,
+                    gamesPlayed = it.gamesPlayed,
+                    playRate = it.playRate,
+                    pickRate = it.pickRate,
+                    winRate = it.winRate
+                )
+            }
+
+            computedData[map?: "All"] = comps
+        }
+
+        return Mono.just(CaupanharmResponse(200, null, CaupanharmResponseType.COMPS_STATS, computedData))
     }
 
     @GetMapping("stats/customComps")
@@ -536,8 +559,8 @@ class CaupanharmController(
         Thread.sleep(2200)
         if (playerResponse.statusCode != 200) return playerResponse
         val player = playerResponse.body as CaupanharmPlayer
-        var visitedPlayers: MutableSet<String> = HashSet()
-        var playersToVisit: MutableSet<String> = HashSet()
+        val visitedPlayers: MutableSet<String> = HashSet()
+        val playersToVisit: MutableSet<String> = HashSet()
         playersToVisit.add(player.puuid)
 
         logger.info("Starting populating database with seed $seed")
@@ -567,7 +590,7 @@ class CaupanharmController(
                     Thread.sleep(2200)
                 }
                 val firstResponse = firstHistoryResponse.body as RawMatchHistory
-                var foundMatches: MutableList<RawMatch> =
+                val foundMatches: MutableList<RawMatch> =
                     firstResponse.history.toMutableList() // Keeping it as a list instead of a set to stop iterating once a given date is reached, since matches are chronologically ordered
                 // Stops the loop when there is no more matches (each request retrieves up to 20 matches so if there is only 0 to 19 matches we know we reached the end)
                 // or when the last match found is older than 2 months (2*30,44 days = 5259486 seconds)
