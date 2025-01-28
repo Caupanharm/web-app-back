@@ -33,9 +33,6 @@ class CaupanharmController(
     private val alphaNumericalRegex: Regex = "^[a-zA-Z0-9]+$".toRegex()
 ) {
     @Autowired
-    lateinit var fullMatchRepository: FullMatchRepository
-
-    @Autowired
     lateinit var matchXSRepository: MatchXSRepository
 
     @Autowired
@@ -88,10 +85,7 @@ class CaupanharmController(
                     val puuid = (playerResponse.body as CaupanharmPlayer).puuid
                     henrikService.getHistory(puuid, region, queue, start, end)
                         .flatMap { rawHistoryResponse ->
-                            val caupanharmMatches: MutableList<CaupanharmMatchFull> =
-                                fullMatchRepository.findByPlayerName(username)
-                                    .map { it.toCaupanharmMatchFull() }
-                                    .toMutableList()
+                            val caupanharmMatches: MutableList<CaupanharmMatchFull> = mutableListOf()
 
                             if (rawHistoryResponse.bodyType == CaupanharmResponseType.RAW_MATCH_HISTORY) {
                                 val caupanharmMatchesIds: List<String> = caupanharmMatches.map { it.metadata.matchId }
@@ -112,7 +106,6 @@ class CaupanharmController(
                                             .doOnNext { match ->
                                                 try {
                                                     val caupanharmMatchFull = match.toCaupanharmMatchFull()
-                                                    fullMatchRepository.save(caupanharmMatchFull.toPostgresMatch())
                                                     matchesAdded++
                                                     savedMatches++
                                                     caupanharmMatches.add(caupanharmMatchFull)
@@ -181,7 +174,6 @@ class CaupanharmController(
             .map { response ->
                 if (response.statusCode == 200) {
                     val match = (response.body as RiotMatchFull).toCaupanharmMatchFull()
-                    if (fullMatchRepository.countByMatchId(matchId) == 0) fullMatchRepository.save(match.toPostgresMatch())
                     CaupanharmResponse(200, null, CaupanharmResponseType.MATCH_FULL, match)
                 } else {
                     response
@@ -207,20 +199,5 @@ class CaupanharmController(
                     response
                 }
             }
-    }
-
-    @GetMapping("analysis")
-    fun getAnalysedMatch(@RequestParam("player") player: String, @RequestParam("id") matchId: String): Mono<CaupanharmResponse> {
-        logger.info("Endpoint fetched: analysis with params: matchId=${matchId}")
-        if (!alphaNumericalRegex.matches(matchId)) {
-            return Mono.just(CaupanharmResponse(500, "Invalid parameters", CaupanharmResponseType.EXCEPTION, null))
-        }
-        val match = fullMatchRepository.findByMatchId(matchId)
-        return if (match != null) {
-            fullMatchTransformer.analyseFullMatch(player, match.toCaupanharmMatchFull())
-        } else {
-            Mono.just(CaupanharmResponse(500, "Match not found", CaupanharmResponseType.EXCEPTION, matchId))
-        }
-
     }
 }
