@@ -123,6 +123,7 @@ data class CaupanharmMatchScore(
 )
 
 data class CaupanharmMatchRound(
+    val roundId: Int,
     val winningTeam: String,
     val result: String, // issue du round: elimination, defuse, detonate, ""
     val ceremony: String, // clutch, thrifty, etc
