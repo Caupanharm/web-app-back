@@ -2,6 +2,7 @@ package perso.caupanharm.backend.models.riot
 
 import perso.caupanharm.backend.models.caupanharm.valorant.match.*
 import perso.caupanharm.backend.models.riot.assets.*
+import perso.caupanharm.backend.utils.VALORANT_STRINGS
 
 data class RiotMatchFull(
     val matchInfo: RiotMatchInfo,
@@ -16,14 +17,14 @@ data class RiotMatchFull(
             metadata = matchInfo.toCaupanharmMatchMetadata(),
             players = players.map { it.toCaupanharmMatchPlayer() },
             score = createCaupanharmScore(),
-            rounds = roundResults.filter{it.roundResult != "Surrendered" }.map { it.toCaupanharmMatchRound() },
+            rounds = roundResults.filter{it.roundResult != VALORANT_STRINGS.ROUND_ENDING_SURRENDER.value }.map { it.toCaupanharmMatchRound() },
             kills = kills.map { it.toCaupanharmMatchKill() }
         )
     }
 
     private fun createCaupanharmScore(): CaupanharmMatchScore {
-        val blue = if (teams[0].teamId == "Blue") teams[0].roundsWon else teams[1].roundsWon
-        val red = if (teams[0].teamId == "Red") teams[0].roundsWon else teams[1].roundsWon
+        val blue = if (teams[0].teamId == VALORANT_STRINGS.TEAM_BLUE.value) teams[0].roundsWon else teams[1].roundsWon
+        val red = if (teams[0].teamId == VALORANT_STRINGS.TEAM_RED.value) teams[0].roundsWon else teams[1].roundsWon
         var blueAttack = 0
         var blueDefense = 0
         var redAttack = 0
@@ -32,14 +33,14 @@ data class RiotMatchFull(
         roundResults.forEach { round ->
             when{
                 round.roundNum <= 11 || (round.roundNum >= 24 && round.roundNum % 2 == 0) -> {
-                    if(round.winningTeam == "Blue"){
+                    if(round.winningTeam == VALORANT_STRINGS.TEAM_BLUE.value){
                         blueDefense++
                     }else{
                         redAttack++
                     }
                 }
                 round.roundNum <= 23 || (round.roundNum >= 24 && round.roundNum %2 == 1) -> {
-                    if(round.winningTeam == "Blue"){
+                    if(round.winningTeam == VALORANT_STRINGS.TEAM_RED.value){
                         blueAttack++
                     }else{
                         redDefense++
@@ -250,6 +251,7 @@ data class RiotMatchRoundResult(
 ) {
     fun toCaupanharmMatchRound(): CaupanharmMatchRound {
         return CaupanharmMatchRound(
+            roundId = roundNum,
             winningTeam = winningTeam,
             result = roundResult,
             ceremony = Ceremonies.getCustomNameFromDisplayName(roundCeremony),
