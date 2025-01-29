@@ -27,7 +27,7 @@ class CaupanharmController(
     private val localDataService: LocalDataService,
     private val henrikService: HenrikService,
     private val usernameRegex: Regex = "^[^,;*\\-#]+#[^,;*\\-#]+\$".toRegex(),
-    private val alphaNumericalRegex: Regex = "^[a-zA-Z0-9]+$".toRegex()
+    private val alphaNumericalRegex: Regex = "^[a-zA-Z0-9-]+\$".toRegex()
 ) {
     @Autowired
     lateinit var matchXSRepository: MatchXSRepository
