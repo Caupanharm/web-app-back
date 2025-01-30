@@ -4,6 +4,7 @@ import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatc
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXS
 import perso.caupanharm.backend.models.caupanharm.valorant.database.PostGresMatchXSPlayer
 import perso.caupanharm.backend.models.riot.assets.Agents
+import perso.caupanharm.backend.models.riot.assets.Ceremonies
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -125,8 +126,8 @@ data class CaupanharmMatchScore(
 data class CaupanharmMatchRound(
     val roundId: Int,
     val winningTeam: String,
-    val result: String, // issue du round: elimination, defuse, detonate, ""
-    val ceremony: String, // clutch, thrifty, etc
+    val result: String, // issue du round: elimination, defuse, detonate, "" TODO(put in enum)
+    val ceremony: Ceremonies,
     val plantEvent: BombEvent?,
     val defuseEvent: BombEvent?,
     val stats: List<CaupanharmRoundPlayerStats>
@@ -175,7 +176,7 @@ data class CaupanharmMatchKill(
     val matchTimeMillis: Int,
     val killer: String?,
     val victim: String,
-    val assistants: List<String>?,
+    val assistants: List<String>,
     val location: Location?,
     val weapon: CaupanharmFinishingDamage,
     val playerLocations: List<PlayerLocation>
