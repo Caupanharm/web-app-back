@@ -29,7 +29,6 @@ class HenrikService(private val henrikClient: WebClient) {
                 CaupanharmResponseType.EXCEPTION,
                 "Requested player: $username"
             )
-            //logger.info("Returning $caupanharmResponse")
             return Mono.just(caupanharmResponse)
         }
 
@@ -42,7 +41,6 @@ class HenrikService(private val henrikClient: WebClient) {
                         in 200..299 -> {
                             val caupanharmResponse = response.bodyToMono(HenrikAccount::class.java)
                                 .map { henrikAccount -> henrikAccount.toCaupanharmResponse() }
-                            //logger.info("Returning $caupanharmResponse")
                             caupanharmResponse
 
                         }
@@ -50,7 +48,6 @@ class HenrikService(private val henrikClient: WebClient) {
                         else -> {
                             val caupanharmResponse = response.bodyToMono(HenrikErrors::class.java)
                                 .map { henrikErrors ->
-                                    //logger.info("Returning ${CaupanharmResponseType.EXCEPTION}")
                                     CaupanharmResponse(
                                         502,
                                         null,
@@ -58,14 +55,12 @@ class HenrikService(private val henrikClient: WebClient) {
                                         henrikErrors
                                     )
                                 }
-                            //logger.info("Returning $caupanharmResponse")
                             caupanharmResponse
                         }
                     }
                 }
         } catch (e: Exception) {
             val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, body = e.toString())
-            //logger.info("Returning $caupanharmResponse")
             Mono.just(caupanharmResponse)
         }
     }
@@ -100,7 +95,6 @@ class HenrikService(private val henrikClient: WebClient) {
                                     CaupanharmResponseType.RAW_MATCH_HISTORY,
                                     rawMatchHistory
                                 )
-                                //logger.info("Returning $caupanharmResponse")
                                 caupanharmResponse
                             }
                         else -> response.bodyToMono(HenrikErrors::class.java)
@@ -111,7 +105,6 @@ class HenrikService(private val henrikClient: WebClient) {
                                     CaupanharmResponseType.EXCEPTION,
                                     henrikErrors
                                 )
-                                //logger.info("Returning $caupanharmResponse")
                                 caupanharmResponse
                             }
                     }
@@ -119,7 +112,6 @@ class HenrikService(private val henrikClient: WebClient) {
 
         } catch (e: Exception) {
             val caupanharmResponse = CaupanharmResponse(500, null, CaupanharmResponseType.EXCEPTION, e.toString())
-            //logger.info("Returning $caupanharmResponse")
             return Mono.just(caupanharmResponse)
         }
     }
