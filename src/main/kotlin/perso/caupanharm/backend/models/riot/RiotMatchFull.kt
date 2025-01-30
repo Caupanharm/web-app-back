@@ -254,7 +254,7 @@ data class RiotMatchRoundResult(
             roundId = roundNum,
             winningTeam = winningTeam,
             result = roundResult,
-            ceremony = Ceremonies.getCustomNameFromDisplayName(roundCeremony),
+            ceremony = Ceremonies.getFromName(roundCeremony),
             plantEvent = getPlantEvent(),
             defuseEvent = getDefuseEvent(),
             stats = playerStats.map { it.toCaupanharmRoundPlayerStats() }
