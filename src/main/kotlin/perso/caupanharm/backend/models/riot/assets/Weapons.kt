@@ -1,6 +1,6 @@
 package perso.caupanharm.backend.models.riot.assets
 
-enum class Weapons(val uuid: String, val displayName: String, val category: String) {
+enum class Weapons(val uuid: String, val displayName: String, val category: String?) {
     MELEE("2f59173c-4bed-b6c3-2191-dea9b58be9c7", "Melee", "EEquippableCategory::Melee"),
     CLASSIC("29a0cfab-485b-f5d5-779a-b59f85e204a8","Classic","EEquippableCategory::Sidearm"),
     SHORTY("42da8ccc-40d5-affc-beec-15aa47b42eda", "Shorty", "EEquippableCategory::Sidearm"),

@@ -29,10 +29,10 @@ data class ImpactAnalysis(
     val acs: Int,
     val kastRounds: Int,
     val averageKAST: Double,
-    val totalClutches: Int,
-    val wonClutches: Int,
     val clutchWinRate: Double?,
-    val totalDuels: Int,
+    val clutchSituationsByEnemiesAlive: List<Int>,
+    val wonClutchesByEnemiesAlive: List<Int>,
+    val duelSituations: Int,
     val wonDuels: Int,
     val duelWinRate: Double?,
 ): Analyzable{
@@ -45,20 +45,20 @@ data class ImpactAnalysis(
 
     operator fun plus(other: ImpactAnalysis): ImpactAnalysis{
         return ImpactAnalysis(
-            this.rounds + other.rounds,
-            this.totalKills + other.totalKills,
-            this.totalDeaths + other.totalDeaths,
-            if(this.totalDeaths + other.totalDeaths == 0) (this.totalKills + other.totalKills).toDouble() else (this.totalKills + other.totalKills).toDouble() / (this.totalDeaths + other.totalDeaths),
-            this.totalScore + other.totalScore,
-            ((this.totalScore + other.totalScore).toDouble() / (this.rounds + other.rounds)).roundToInt(),
-            this.kastRounds + other.kastRounds,
-            (this.kastRounds + other.kastRounds).toDouble() / (this.rounds + other.rounds),
-            this.totalClutches + other.totalClutches,
-            this.wonClutches + other.wonClutches,
-            if(this.totalClutches + other.totalClutches == 0) null else (this.wonClutches + other.wonClutches).toDouble() / (this.totalClutches + other.totalClutches),
-            this.totalDuels + other.totalDuels,
-            this.wonDuels + other.wonDuels,
-             if(this.totalDuels + other.totalDuels == 0) null else (this.wonDuels + other.wonDuels).toDouble() / (this.totalDuels + other.totalDuels)
+            rounds = this.rounds + other.rounds,
+            totalKills = this.totalKills + other.totalKills,
+            totalDeaths = this.totalDeaths + other.totalDeaths,
+            kd = if(this.totalDeaths + other.totalDeaths == 0) (this.totalKills + other.totalKills).toDouble() else (this.totalKills + other.totalKills).toDouble() / (this.totalDeaths + other.totalDeaths),
+            totalScore = this.totalScore + other.totalScore,
+            acs = ((this.totalScore + other.totalScore).toDouble() / (this.rounds + other.rounds)).roundToInt(),
+            kastRounds = this.kastRounds + other.kastRounds,
+            averageKAST = (this.kastRounds + other.kastRounds).toDouble() / (this.rounds + other.rounds),
+            clutchWinRate = if(this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum() == 0) null else (this.wonClutchesByEnemiesAlive.sum() + other.wonClutchesByEnemiesAlive.sum()).toDouble() / (this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum()),
+            clutchSituationsByEnemiesAlive = this.clutchSituationsByEnemiesAlive.zip(other.clutchSituationsByEnemiesAlive){thisValue, otherValue -> thisValue + otherValue},
+            wonClutchesByEnemiesAlive = this.wonClutchesByEnemiesAlive.zip(other.wonClutchesByEnemiesAlive){thisValue, otherValue -> thisValue + otherValue},
+            duelSituations = this.duelSituations + other.duelSituations,
+            wonDuels = this.wonDuels + other.wonDuels,
+            duelWinRate = if(this.duelSituations + other.duelSituations == 0) null else (this.wonDuels + other.wonDuels).toDouble() / (this.duelSituations + other.duelSituations)
         )
     }
 }
