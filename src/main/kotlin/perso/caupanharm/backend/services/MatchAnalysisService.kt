@@ -59,8 +59,6 @@ class MatchAnalysisService {
         var kastRounds = 0
         val clutchSituationsByEnemiesAlive: MutableList<Int> = mutableListOf(0,0,0,0,0,0,0) // max 7 kills including Sage and Clove ultimates
         val wonClutchesByEnemiesAlive: MutableList<Int> = mutableListOf(0,0,0,0,0,0,0)
-        var duelSituations = 0
-        var wonDuels = 0
 
         for(round in rounds){
             val playerStats = round.stats.single{ it.player == player.playerId }
@@ -84,16 +82,6 @@ class MatchAnalysisService {
                     wonClutchesByEnemiesAlive[clutchEnemies - 11]++
                 }
             }
-
-            for(kill in killEvents.filter{ it.killer == player.playerId || it.victim == player.playerId }){
-                when(duelDetection()){
-                    -1 -> duelSituations++
-                    1 -> {
-                        duelSituations++
-                        wonDuels++
-                    }
-                }
-            }
         }
 
         return ImpactAnalysis(
@@ -107,10 +95,7 @@ class MatchAnalysisService {
             averageKAST = kastRounds.toDouble() / rounds.size,
             clutchWinRate = if(clutchSituationsByEnemiesAlive.sum() == 0) null else wonClutchesByEnemiesAlive.sum().toDouble() / clutchSituationsByEnemiesAlive.sum(),
             clutchSituationsByEnemiesAlive = clutchSituationsByEnemiesAlive,
-            wonClutchesByEnemiesAlive = wonClutchesByEnemiesAlive,
-            duelSituations = duelSituations,
-            wonDuels = wonDuels,
-            duelWinRate = if(duelSituations == 0) null else wonDuels.toDouble() / duelSituations
+            wonClutchesByEnemiesAlive = wonClutchesByEnemiesAlive
         )
     }
 
@@ -228,12 +213,4 @@ class MatchAnalysisService {
             }
         }
     }
-
-    /*
-    Returns 0 if the kill wasn't a duel, -1 if it was a lost duel, 1 if it was won
-     */
-    fun duelDetection(): Int{
-        return 0 //TODO(Not yet implemented)
-    }
-
 }

@@ -32,33 +32,27 @@ data class ImpactAnalysis(
     val clutchWinRate: Double?,
     val clutchSituationsByEnemiesAlive: List<Int>,
     val wonClutchesByEnemiesAlive: List<Int>,
-    val duelSituations: Int,
-    val wonDuels: Int,
-    val duelWinRate: Double?,
-): Analyzable{
+) : Analyzable {
     override val computedScore: Double
         get() = calculateScore()
 
-        private fun calculateScore(): Double {
-            return 0.0 // TODO("Not yet implemented")
-        }
+    private fun calculateScore(): Double {
+        return 0.0 // TODO("Not yet implemented")
+    }
 
-    operator fun plus(other: ImpactAnalysis): ImpactAnalysis{
+    operator fun plus(other: ImpactAnalysis): ImpactAnalysis {
         return ImpactAnalysis(
             rounds = this.rounds + other.rounds,
             totalKills = this.totalKills + other.totalKills,
             totalDeaths = this.totalDeaths + other.totalDeaths,
-            kd = if(this.totalDeaths + other.totalDeaths == 0) (this.totalKills + other.totalKills).toDouble() else (this.totalKills + other.totalKills).toDouble() / (this.totalDeaths + other.totalDeaths),
+            kd = if (this.totalDeaths + other.totalDeaths == 0) (this.totalKills + other.totalKills).toDouble() else (this.totalKills + other.totalKills).toDouble() / (this.totalDeaths + other.totalDeaths),
             totalScore = this.totalScore + other.totalScore,
             acs = ((this.totalScore + other.totalScore).toDouble() / (this.rounds + other.rounds)).roundToInt(),
             kastRounds = this.kastRounds + other.kastRounds,
             averageKAST = (this.kastRounds + other.kastRounds).toDouble() / (this.rounds + other.rounds),
-            clutchWinRate = if(this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum() == 0) null else (this.wonClutchesByEnemiesAlive.sum() + other.wonClutchesByEnemiesAlive.sum()).toDouble() / (this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum()),
-            clutchSituationsByEnemiesAlive = this.clutchSituationsByEnemiesAlive.zip(other.clutchSituationsByEnemiesAlive){thisValue, otherValue -> thisValue + otherValue},
-            wonClutchesByEnemiesAlive = this.wonClutchesByEnemiesAlive.zip(other.wonClutchesByEnemiesAlive){thisValue, otherValue -> thisValue + otherValue},
-            duelSituations = this.duelSituations + other.duelSituations,
-            wonDuels = this.wonDuels + other.wonDuels,
-            duelWinRate = if(this.duelSituations + other.duelSituations == 0) null else (this.wonDuels + other.wonDuels).toDouble() / (this.duelSituations + other.duelSituations)
+            clutchWinRate = if (this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum() == 0) null else (this.wonClutchesByEnemiesAlive.sum() + other.wonClutchesByEnemiesAlive.sum()).toDouble() / (this.clutchSituationsByEnemiesAlive.sum() + other.clutchSituationsByEnemiesAlive.sum()),
+            clutchSituationsByEnemiesAlive = this.clutchSituationsByEnemiesAlive.zip(other.clutchSituationsByEnemiesAlive) { thisValue, otherValue -> thisValue + otherValue },
+            wonClutchesByEnemiesAlive = this.wonClutchesByEnemiesAlive.zip(other.wonClutchesByEnemiesAlive) { thisValue, otherValue -> thisValue + otherValue }
         )
     }
 }
